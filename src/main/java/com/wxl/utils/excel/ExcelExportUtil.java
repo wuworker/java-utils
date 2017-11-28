@@ -98,9 +98,13 @@ public class ExcelExportUtil {
     public static <T> void export(List<T> list, OutputStream out, String sheetName, String[] titles,
                                   ExportStyleConfigure titleConfig, ExportConfigure configure,
                                   ExcelVersion version) throws IOException {
-        Workbook workbook = createTmp(version);
-        exportToTmp(workbook, list, sheetName, titles, titleConfig, configure);
-        outputTmpAndClose(workbook, out);
+        try {
+            Workbook workbook = createTmp(version);
+            exportToTmp(workbook, list, sheetName, titles, titleConfig, configure);
+            outputTmp(workbook, out);
+        } finally {
+            closeOutput(out);
+        }
     }
 
     public static <T> void exportToTmp(Workbook workbook, List<T> list, String sheetName, final String[] titles,
@@ -137,9 +141,13 @@ public class ExcelExportUtil {
      */
     public static <T> void export(List<T> list, OutputStream out, String sheetName, ExportHeadHandler headHandler,
                                   ExportConfigure configure, ExcelVersion version) throws IOException {
-        Workbook workbook = createTmp(version);
-        exportToTmp(workbook, list, sheetName, headHandler, configure);
-        outputTmpAndClose(workbook, out);
+        try {
+            Workbook workbook = createTmp(version);
+            exportToTmp(workbook, list, sheetName, headHandler, configure);
+            outputTmp(workbook, out);
+        } finally {
+            closeOutput(out);
+        }
     }
 
 
@@ -239,12 +247,28 @@ public class ExcelExportUtil {
      * 导出并关闭
      */
     public static void outputTmpAndClose(Workbook workbook, OutputStream out) throws IOException {
+        try {
+            outputTmp(workbook, out);
+        } finally {
+            closeOutput(out);
+        }
+    }
+
+    /**
+     * 导出
+     */
+    public static void outputTmp(Workbook workbook, OutputStream out) throws IOException {
         Assert.notNull(workbook, "workbook can not null");
         Assert.notNull(out, "outputStream can not null");
-        try {
-            workbook.write(out);
-        } finally {
-            workbook.close();
+        workbook.write(out);
+    }
+
+    /**
+     * 关闭输出流
+     */
+    public static void closeOutput(OutputStream out) throws IOException {
+        if (out != null) {
+            out.close();
         }
     }
 

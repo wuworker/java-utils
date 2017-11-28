@@ -50,12 +50,12 @@ public class ExcelImportUtil {
         });
     }
 
-    public static List<List<String>> importFromTmp(Workbook workbook,int sheetIndex) {
-        return importFromTmp(workbook,sheetIndex,0);
+    public static List<List<String>> importFromTmp(Workbook workbook, int sheetIndex) {
+        return importFromTmp(workbook, sheetIndex, 0);
     }
 
-    public static List<List<String>> importFromTmp(Workbook workbook,int sheetIndex, int rowStart){
-        return importFromTmp(workbook,sheetIndex,rowStart,(map) -> {
+    public static List<List<String>> importFromTmp(Workbook workbook, int sheetIndex, int rowStart) {
+        return importFromTmp(workbook, sheetIndex, rowStart, (map) -> {
             return new ArrayList<>(map.values());
         });
     }
@@ -67,17 +67,19 @@ public class ExcelImportUtil {
      * @param clazz 对应的类
      */
     public static <T> List<T> imports(InputStream in, Class<T> clazz, int rowStart) throws IOException {
-        return imports(in,clazz,0,rowStart);
+        return imports(in, clazz, 0, rowStart);
     }
 
     public static <T> List<T> imports(InputStream in, Class<T> clazz, int sheetIndex, int rowStart) throws IOException {
-        Workbook workbook = createTmp(in);
-        List<T> result = importFromTmp(workbook,clazz,sheetIndex,rowStart);
-        destroyTmp(workbook);
-        return result;
+        try {
+            Workbook workbook = createTmp(in);
+            return importFromTmp(workbook, clazz, sheetIndex, rowStart);
+        } finally {
+            closeInput(in);
+        }
     }
 
-    public static <T> List<T> importFromTmp(Workbook workbook, Class<T> clazz, int sheetIndex, int rowStart){
+    public static <T> List<T> importFromTmp(Workbook workbook, Class<T> clazz, int sheetIndex, int rowStart) {
         Assert.notNull(clazz, "param class can not null");
         return importFromTmp(workbook, sheetIndex, rowStart, (map) -> {
             try {
@@ -102,18 +104,20 @@ public class ExcelImportUtil {
      * @param in         输入流
      * @param sheetIndex 表索引，小于0则导入所有表
      * @param rowStart   开始读取的行号，从0开始
-     * @param rowHandler  行处理，返回行处理后结果
+     * @param rowHandler 行处理，返回行处理后结果
      * @param <T>        行处理结果
      */
     public static <T> List<T> imports(InputStream in, int sheetIndex, int rowStart,
                                       ImportRowHandler<T> rowHandler) throws IOException {
-        Workbook workbook = createTmp(in);
-        List<T> result = importFromTmp(workbook,sheetIndex,rowStart, rowHandler);
-        destroyTmp(workbook);
-        return result;
+        try {
+            Workbook workbook = createTmp(in);
+            return importFromTmp(workbook, sheetIndex, rowStart, rowHandler);
+        } finally {
+            closeInput(in);
+        }
     }
 
-    public static <T> List<T> importFromTmp(Workbook workbook, int sheetIndex, int rowStart, ImportRowHandler<T> rowHandler){
+    public static <T> List<T> importFromTmp(Workbook workbook, int sheetIndex, int rowStart, ImportRowHandler<T> rowHandler) {
         Assert.notNull(workbook, "workbook can not null");
         Assert.isTrue(sheetIndex >= 0, "sheetIndex must >=0");
         Assert.isTrue(rowStart >= 0, "rowStart must >=0");
@@ -133,9 +137,9 @@ public class ExcelImportUtil {
     /**
      * 关闭输入流
      */
-    public static void destroyTmp(Workbook workbook)throws IOException{
-        Assert.notNull(workbook, "workbook can not null");
-        workbook.close();
+    public static void closeInput(InputStream in) throws IOException {
+        Assert.notNull(in, "inputStream can not null");
+        in.close();
     }
 
 
@@ -202,7 +206,6 @@ public class ExcelImportUtil {
                 return cell.toString();
         }
     }
-
 
 
 }

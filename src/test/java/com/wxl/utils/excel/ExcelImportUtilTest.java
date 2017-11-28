@@ -30,7 +30,7 @@ public class ExcelImportUtilTest {
         List<User> list1 = ExcelImportUtil.importFromTmp(workbook,User.class,0,1);
         List<List<String>> list2 = ExcelImportUtil.importFromTmp(workbook,1,1);
         List<List<String>> list3 = ExcelImportUtil.importFromTmp(workbook,2,1);
-        ExcelImportUtil.destroyTmp(workbook);
+        ExcelImportUtil.closeInput(in);
         System.out.println(list1);
         System.out.println(list2);
         System.out.println(list3);
