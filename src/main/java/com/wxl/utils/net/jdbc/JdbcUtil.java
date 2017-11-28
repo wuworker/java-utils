@@ -2,7 +2,6 @@ package com.wxl.utils.net.jdbc;
 
 import com.wxl.utils.ReflectUtil;
 import lombok.Getter;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
 
@@ -15,7 +14,6 @@ import java.util.Date;
  * Created by wuxingle on 2017/7/24.
  * jdbc工具类
  */
-@Slf4j
 public class JdbcUtil {
 
     @Getter
