@@ -52,8 +52,8 @@
             <artifactId>mysql-connector-java</artifactId>
             <version>5.1.39</version>
             <scope>runtime</scope>
-
         </dependency>
+
         <!-- poi -->
         <dependency>
             <groupId>org.apache.poi</groupId>
