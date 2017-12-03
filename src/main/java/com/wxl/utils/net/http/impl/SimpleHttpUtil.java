@@ -1,5 +1,6 @@
 package com.wxl.utils.net.http.impl;
 
+import com.wxl.utils.annotation.ThreadSafe;
 import com.wxl.utils.net.http.HttpHeader;
 import com.wxl.utils.net.http.HttpRequested;
 import com.wxl.utils.net.http.HttpResponsed;
@@ -23,6 +24,7 @@ import static com.wxl.utils.net.http.HttpMethod.*;
  * 如果服务器返回500，读取输入流时会IO异常。
  */
 @Slf4j
+@ThreadSafe
 public class SimpleHttpUtil extends HttpUtil {
 
     //http支持方法

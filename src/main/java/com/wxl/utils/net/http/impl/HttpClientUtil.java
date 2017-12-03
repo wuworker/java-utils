@@ -1,6 +1,7 @@
 package com.wxl.utils.net.http.impl;
 
 
+import com.wxl.utils.annotation.ThreadSafe;
 import com.wxl.utils.net.http.HttpHeader;
 import com.wxl.utils.net.http.HttpRequested;
 import com.wxl.utils.net.http.HttpResponsed;
@@ -30,6 +31,7 @@ import static com.wxl.utils.net.http.HttpMethod.*;
  * 使用apache的httpClient实现
  */
 @Slf4j
+@ThreadSafe
 public class HttpClientUtil extends HttpUtil {
 
     private CloseableHttpClient httpClient;

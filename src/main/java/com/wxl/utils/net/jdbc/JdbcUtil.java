@@ -1,6 +1,7 @@
 package com.wxl.utils.net.jdbc;
 
 import com.wxl.utils.ReflectUtil;
+import com.wxl.utils.annotation.ThreadSafe;
 import lombok.Getter;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
@@ -14,6 +15,7 @@ import java.util.Date;
  * Created by wuxingle on 2017/7/24.
  * jdbc工具类
  */
+@ThreadSafe
 public class JdbcUtil {
 
     @Getter

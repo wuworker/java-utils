@@ -8,16 +8,38 @@ import java.util.Map;
  */
 public interface CacheMap<K,V> extends Map<K,V>{
 
+    //持久的key
+    long PERSISTENT_KEY = -1;
+
+    //key不存在
+    long NOT_EXIST_KEY = -2;
+
     /**
-     * 获取过期时间
+     * 设置Key的过期时间
+     * @param expire 毫秒
+     * @return key是否存在
      */
-    Long getExpire(K key);
+    boolean setExpire(K key,long expire);
+
+
+    /**
+     * 设置Key为持久化
+     * @return key是否存在
+     */
+    boolean setPersistent(K key);
 
     /**
      * 获取剩余存活时间
+     * @return PERSISTENT_KEY  说明是永不过期的key
+     *         NOT_EXIST_KEY   说明key不存在
      */
-    Long getPTTL(K key);
+    long ttl(K key);
 
+
+    /**
+     * 是否是持久化的key
+     */
+    boolean isPersistent(K key);
 
     /**
      * 放入key并设置过期时间
@@ -26,9 +48,15 @@ public interface CacheMap<K,V> extends Map<K,V>{
 
 
     /**
-     * 是否过期
+     * 如果value不存在则放入
      */
-    boolean isExpire(K key);
+    default V putIfAbsent(K key, V value, long expire) {
+        V v = get(key);
+        if (v == null) {
+            v = put(key, value,expire);
+        }
 
+        return v;
+    }
 }
 
