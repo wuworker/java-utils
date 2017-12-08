@@ -54,7 +54,7 @@ public class SynchronizedCacheMap<K, V> extends AbstractMap<K, V>
     /**
      * 获取锁
      */
-    public Object getLock(){
+    public Object getSynchronizedLock(){
         return lockProxyMap;
     }
 
