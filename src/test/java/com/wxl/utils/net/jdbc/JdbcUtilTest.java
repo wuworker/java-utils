@@ -9,6 +9,9 @@ import org.junit.Test;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by wuxingle on 2017/11/24.
@@ -88,6 +91,41 @@ public class JdbcUtilTest {
             e.printStackTrace();
             jdbcUtil.rollback();
         }
+    }
+
+
+    @Test
+    public void test(){
+        int threadNum = 100;
+        ExecutorService service = Executors.newFixedThreadPool(threadNum);
+        CountDownLatch downLatch1 = new CountDownLatch(threadNum);
+        CountDownLatch downLatch2 = new CountDownLatch(threadNum);
+        for(int i=0;i<threadNum;i++){
+            service.submit(()->{
+                try {
+                    downLatch1.countDown();
+                    downLatch1.await();
+                    String threadName = Thread.currentThread().getName();
+                    jdbcUtil.startTransaction();
+                    List<Object> list = jdbcUtil.querySingleField("select money from t_user where id=1");
+                    System.out.println(threadName+":"+list);
+                    jdbcUtil.update("update t_user set money=money+1 where id=1");
+                    jdbcUtil.commit();
+                    jdbcUtil.close();
+                    System.out.println(threadName+",end");
+                    downLatch2.countDown();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+
+        try {
+            downLatch2.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        service.shutdown();
     }
 
 

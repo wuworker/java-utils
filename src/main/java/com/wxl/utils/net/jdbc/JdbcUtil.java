@@ -3,6 +3,7 @@ package com.wxl.utils.net.jdbc;
 import com.wxl.utils.ReflectUtil;
 import com.wxl.utils.annotation.ThreadSafe;
 import lombok.Getter;
+import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
 
@@ -77,6 +78,35 @@ public class JdbcUtil {
     }
 
     /**
+     * 查第一行的单个字段
+     */
+    public Object querySingleRowAndField(String sql)throws SQLException {
+        return querySingleRowAndField(sql,Object.class);
+    }
+
+    public <T> T querySingleRowAndField(String sql,Class<T> clazz)throws SQLException {
+        return querySingleRowAndField(sql,clazz,null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T querySingleRowAndField(String sql,Class<T> clazz,Object... params)throws SQLException {
+        Assert.notNull(clazz,"class can not null");
+        List<Object> list = querySingleField(sql, params);
+        if(list.isEmpty()){
+            return null;
+        }
+        if(list.size() > 1){
+            throw new SQLException("sql result find "+list.size()+",but expect is one!");
+        }
+        Object o = list.get(0);
+        if(o == null) return  null;
+        if(clazz.isInstance(o)){
+            return (T)o;
+        }
+        throw new ClassCastException("sql result class is "+o.getClass().getName()+",can not cast to "+clazz.getName());
+    }
+
+    /**
      * 查询单个字段
      */
     public List<Object> querySingleField(String sql) throws SQLException {
@@ -84,9 +114,7 @@ public class JdbcUtil {
     }
 
     public List<Object> querySingleField(String sql, Object... params) throws SQLException {
-        return query((map) -> {
-            return map.values().iterator().next();
-        }, sql, params);
+        return query((map) -> map.values().iterator().next(), sql, params);
     }
 
 
@@ -113,6 +141,7 @@ public class JdbcUtil {
     }
 
     public <T> List<T> query(final Class<T> clazz, JdbcMapping jdbcMapping, String sql, Object... params) throws SQLException {
+        Assert.notNull(clazz,"class can not null");
         return query((map) -> {
             try {
                 T t = clazz.newInstance();
@@ -137,7 +166,9 @@ public class JdbcUtil {
      * @param handler 行处理
      */
     public <T> List<T> query(JdbcRowHandler<T> handler, String sql, Object... params) throws SQLException {
-        List<T> result = new ArrayList<T>();
+        Assert.notNull(handler,"handler can not null");
+        Assert.hasText(sql,"sql can not empty");
+        List<T> result = new ArrayList<>();
         Connection connection = getConnection();
         ResultSet resultSet = null;
         try (PreparedStatement statement = connection.prepareStatement(sql)) {

@@ -8,7 +8,12 @@ import java.util.Map;
  */
 public interface JdbcRowHandler<T> {
 
-
+    /**
+     * 处理一行数据
+     * @param data 数据
+     * @return 处理结果
+     */
     T handleRow(Map<String,Object> data);
+
 
 }
