@@ -9,7 +9,7 @@ import java.security.KeyPairGenerator;
  * Created by wuxingle on 2017/9/10 0010.
  * 密钥生成工具类
  */
-public class KeyGeneratorUtil {
+public class KeyGeneratorUtils {
 
     /**
      * HmacMD5密钥

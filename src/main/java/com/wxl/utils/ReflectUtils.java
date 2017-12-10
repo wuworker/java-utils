@@ -11,7 +11,7 @@ import java.lang.reflect.Method;
  * Created by wuxingle on 2017/10/21 0021.
  * 反射工具类
  */
-public class ReflectUtil {
+public class ReflectUtils {
 
 
     /**

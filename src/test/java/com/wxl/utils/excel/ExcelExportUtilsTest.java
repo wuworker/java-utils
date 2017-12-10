@@ -13,7 +13,7 @@ import java.util.*;
  * Created by wuxingle on 2017/10/21 0021.
  *
  */
-public class ExcelExportUtilTest {
+public class ExcelExportUtilsTest {
 
     @Test
     public void export() throws Exception {
@@ -33,11 +33,11 @@ public class ExcelExportUtilTest {
         }
 
         OutputStream out = new FileOutputStream("src/test/resources/map.xlsx");
-        Workbook workbook = ExcelExportUtil.createTmp(ExcelVersion.XLSX);
-        ExcelExportUtil.exportToTmp(workbook,list,"用户",new String[]{"id","姓名","年龄","手机","地址"});
-        ExcelExportUtil.exportToTmp(workbook,maps,"map",new String[]{"姓名","年龄","手机","地址"});
-        ExcelExportUtil.exportToTmp(workbook,strings,"strings",new String[]{"字符串"});
-        ExcelExportUtil.outputTmpAndClose(workbook,out);
+        Workbook workbook = ExcelExportUtils.createTmp(ExcelVersion.XLSX);
+        ExcelExportUtils.exportToTmp(workbook,list,"用户",new String[]{"id","姓名","年龄","手机","地址"});
+        ExcelExportUtils.exportToTmp(workbook,maps,"map",new String[]{"姓名","年龄","手机","地址"});
+        ExcelExportUtils.exportToTmp(workbook,strings,"strings",new String[]{"字符串"});
+        ExcelExportUtils.outputTmpAndClose(workbook,out);
     }
 
 
@@ -56,7 +56,7 @@ public class ExcelExportUtilTest {
         }
         OutputStream out = new FileOutputStream("src/test/resources/map2.xlsx");
 
-        ExcelExportUtil.export(list,out,ExcelVersion.XLSX);
+        ExcelExportUtils.export(list,out,ExcelVersion.XLSX);
     }
 
 

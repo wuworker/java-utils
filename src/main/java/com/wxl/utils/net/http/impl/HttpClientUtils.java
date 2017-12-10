@@ -5,7 +5,7 @@ import com.wxl.utils.annotation.ThreadSafe;
 import com.wxl.utils.net.http.HttpHeader;
 import com.wxl.utils.net.http.HttpRequested;
 import com.wxl.utils.net.http.HttpResponsed;
-import com.wxl.utils.net.http.HttpUtil;
+import com.wxl.utils.net.http.HttpUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -32,7 +32,7 @@ import static com.wxl.utils.net.http.HttpMethod.*;
  */
 @Slf4j
 @ThreadSafe
-public class HttpClientUtil extends HttpUtil {
+public class HttpClientUtils extends HttpUtils {
 
     private CloseableHttpClient httpClient;
 
@@ -55,7 +55,7 @@ public class HttpClientUtil extends HttpUtil {
     };
 
 
-    private HttpClientUtil(
+    private HttpClientUtils(
             String requestCharset,
             int connectTimeout,
             int readTimeout,
@@ -99,7 +99,7 @@ public class HttpClientUtil extends HttpUtil {
     /**
      * 获取默认实例
      */
-    public static HttpClientUtil createDefault() {
+    public static HttpClientUtils createDefault() {
         return new Builder().build();
     }
 
@@ -224,7 +224,7 @@ public class HttpClientUtil extends HttpUtil {
     /**
      * httpClient的一些配置
      */
-    public static class Builder extends HttpUtil.Builder {
+    public static class Builder extends HttpUtils.Builder {
         //从连接池获取连接超时时间
         private int conRequestTimeout = 10000;
         //最大线程数
@@ -238,8 +238,8 @@ public class HttpClientUtil extends HttpUtil {
         private Builder() {
         }
 
-        public HttpClientUtil build() {
-            return new HttpClientUtil(
+        public HttpClientUtils build() {
+            return new HttpClientUtils(
                     requestCharset,
                     connectTimeout,
                     readTimeout,

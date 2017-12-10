@@ -9,7 +9,7 @@ import java.util.Arrays;
  * Created by wuxingle on 2017/9/7 0007.
  * base64工具类
  */
-public class BASE64Util {
+public class Base64Utils {
 
 
     private static final byte[] pem_array = {

@@ -1,6 +1,5 @@
 package com.wxl.utils;
 
-import com.wxl.utils.ReflectUtil;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
@@ -9,7 +8,7 @@ import java.lang.reflect.Field;
  * Created by wuxingle on 2017/11/24 0024.
  * 反射测试
  */
-public class ReflectUtilTest {
+public class ReflectUtilsTest {
 
     public class A {
 
@@ -44,11 +43,11 @@ public class ReflectUtilTest {
     public void testGetFieldValue()throws Exception {
         B b = new B();
         Field nameField = B.class.getSuperclass().getDeclaredField("name");
-        Object value = ReflectUtil.getObjectValue(b,nameField);
+        Object value = ReflectUtils.getObjectValue(b,nameField);
         System.out.println(value);
-        Object value2 = ReflectUtil.getObjectValue(b,B.class.getDeclaredField("age"));
+        Object value2 = ReflectUtils.getObjectValue(b,B.class.getDeclaredField("age"));
         System.out.println(value2);
-        Object value3 = ReflectUtil.getObjectValue(b,B.class.getDeclaredField("man"));
+        Object value3 = ReflectUtils.getObjectValue(b,B.class.getDeclaredField("man"));
         System.out.println(value3);
     }
 
@@ -57,13 +56,13 @@ public class ReflectUtilTest {
     public void testSetFieldValue()throws Exception {
         B b = new B();
         Field nameField = B.class.getSuperclass().getDeclaredField("name");
-        ReflectUtil.setObjectValue(b,nameField,"拉拉");
-        Object value = ReflectUtil.getObjectValue(b,nameField);
+        ReflectUtils.setObjectValue(b,nameField,"拉拉");
+        Object value = ReflectUtils.getObjectValue(b,nameField);
         System.out.println(value);
 
         Field ageField = B.class.getDeclaredField("age");
-        ReflectUtil.setObjectValue(b,ageField,"100");
-        Object value2 = ReflectUtil.getObjectValue(b,ageField);
+        ReflectUtils.setObjectValue(b,ageField,"100");
+        Object value2 = ReflectUtils.getObjectValue(b,ageField);
         System.out.println(value2);
     }
 

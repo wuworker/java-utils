@@ -15,7 +15,7 @@ import java.util.*;
  * Created by wuxingle on 2017/6/23 0023.
  * http工具类
  */
-public abstract class HttpUtil {
+public abstract class HttpUtils {
 
     //请求的编码
     protected String requestCharset;
@@ -27,9 +27,9 @@ public abstract class HttpUtil {
     protected int readTimeout;
 
 
-    protected HttpUtil(String requestCharset,
-                       int connectTimeout,
-                       int readTimeout) {
+    protected HttpUtils(String requestCharset,
+                        int connectTimeout,
+                        int readTimeout) {
         this.requestCharset = requestCharset;
         this.connectTimeout = connectTimeout;
         this.readTimeout = readTimeout;

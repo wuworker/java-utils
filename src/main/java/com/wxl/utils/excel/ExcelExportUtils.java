@@ -15,13 +15,13 @@ import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.util.*;
 
-import static com.wxl.utils.ReflectUtil.getObjectValue;
+import static com.wxl.utils.ReflectUtils.getObjectValue;
 
 /**
  * Created by wuxingle on 2017/10/21 0021.
  * excel导出工具类
  */
-public class ExcelExportUtil {
+public class ExcelExportUtils {
 
     /**
      * 根据版本获取workbook

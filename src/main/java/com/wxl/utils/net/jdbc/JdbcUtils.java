@@ -1,6 +1,6 @@
 package com.wxl.utils.net.jdbc;
 
-import com.wxl.utils.ReflectUtil;
+import com.wxl.utils.ReflectUtils;
 import com.wxl.utils.annotation.ThreadSafe;
 import lombok.Getter;
 import org.springframework.util.Assert;
@@ -17,7 +17,7 @@ import java.util.Date;
  * jdbc工具类
  */
 @ThreadSafe
-public class JdbcUtil {
+public class JdbcUtils {
 
     @Getter
     private String driver;
@@ -42,12 +42,12 @@ public class JdbcUtil {
     private ThreadLocal<Boolean> transactionState = new ThreadLocal<>();
 
 
-    public JdbcUtil(String driver, String url, String username, String password) throws ClassNotFoundException {
+    public JdbcUtils(String driver, String url, String username, String password) throws ClassNotFoundException {
         this(driver, url, username, password, true);
     }
 
 
-    public JdbcUtil(String driver, String url, String username, String password, boolean autoClose) throws ClassNotFoundException {
+    public JdbcUtils(String driver, String url, String username, String password, boolean autoClose) throws ClassNotFoundException {
         this.driver = driver;
         this.url = url;
         this.username = username;
@@ -59,10 +59,6 @@ public class JdbcUtil {
     /**
      * 更新
      */
-    public int update(String sql) throws SQLException {
-        return update(sql, null);
-    }
-
     public int update(String sql, Object... params) throws SQLException {
         Connection connection = getConnection();
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -80,39 +76,31 @@ public class JdbcUtil {
     /**
      * 查第一行的单个字段
      */
-    public Object querySingleRowAndField(String sql)throws SQLException {
-        return querySingleRowAndField(sql,Object.class);
-    }
-
-    public <T> T querySingleRowAndField(String sql,Class<T> clazz)throws SQLException {
-        return querySingleRowAndField(sql,clazz,null);
+    public Object querySingleRowAndField(String sql, Object... params) throws SQLException {
+        return querySingleRowAndField(Object.class, sql, params);
     }
 
     @SuppressWarnings("unchecked")
-    public <T> T querySingleRowAndField(String sql,Class<T> clazz,Object... params)throws SQLException {
-        Assert.notNull(clazz,"class can not null");
+    public <T> T querySingleRowAndField(Class<T> clazz, String sql, Object... params) throws SQLException {
+        Assert.notNull(clazz, "class can not null");
         List<Object> list = querySingleField(sql, params);
-        if(list.isEmpty()){
+        if (list.isEmpty()) {
             return null;
         }
-        if(list.size() > 1){
-            throw new SQLException("sql result find "+list.size()+",but expect is one!");
+        if (list.size() > 1) {
+            throw new SQLException("sql result find " + list.size() + ",but expect is one!");
         }
         Object o = list.get(0);
-        if(o == null) return  null;
-        if(clazz.isInstance(o)){
-            return (T)o;
+        if (o == null) return null;
+        if (clazz.isInstance(o)) {
+            return (T) o;
         }
-        throw new ClassCastException("sql result class is "+o.getClass().getName()+",can not cast to "+clazz.getName());
+        throw new ClassCastException("sql result class is " + o.getClass().getName() + ",can not cast to " + clazz.getName());
     }
 
     /**
      * 查询单个字段
      */
-    public List<Object> querySingleField(String sql) throws SQLException {
-        return querySingleField(sql, null);
-    }
-
     public List<Object> querySingleField(String sql, Object... params) throws SQLException {
         return query((map) -> map.values().iterator().next(), sql, params);
     }
@@ -121,15 +109,8 @@ public class JdbcUtil {
     /**
      * 查询多个字段
      */
-    public List<Map<String, Object>> query(String sql) throws SQLException {
-        return query(sql, null);
-    }
-
-
     public List<Map<String, Object>> query(String sql, Object... params) throws SQLException {
-        return query((map) -> {
-            return map;
-        }, sql, params);
+        return query((map) -> map, sql, params);
     }
 
 
@@ -140,8 +121,8 @@ public class JdbcUtil {
         return query(clazz, null, sql, params);
     }
 
-    public <T> List<T> query(final Class<T> clazz, JdbcMapping jdbcMapping, String sql, Object... params) throws SQLException {
-        Assert.notNull(clazz,"class can not null");
+    public <T> List<T> query(final Class<T> clazz, final JdbcMapping jdbcMapping, String sql, Object... params) throws SQLException {
+        Assert.notNull(clazz, "class can not null");
         return query((map) -> {
             try {
                 T t = clazz.newInstance();
@@ -166,8 +147,8 @@ public class JdbcUtil {
      * @param handler 行处理
      */
     public <T> List<T> query(JdbcRowHandler<T> handler, String sql, Object... params) throws SQLException {
-        Assert.notNull(handler,"handler can not null");
-        Assert.hasText(sql,"sql can not empty");
+        Assert.notNull(handler, "handler can not null");
+        Assert.hasText(sql, "sql can not empty");
         List<T> result = new ArrayList<>();
         Connection connection = getConnection();
         ResultSet resultSet = null;
@@ -255,8 +236,8 @@ public class JdbcUtil {
                 resultSet.close();
             }
         } finally {
-            if (autoClose && (transactionState.get()==null
-                    || !transactionState.get())){
+            if (autoClose && (transactionState.get() == null
+                    || !transactionState.get())) {
                 close();
             }
         }
@@ -278,17 +259,17 @@ public class JdbcUtil {
         if (value instanceof Date) {
             Class<?> clazz = field.getType();
             if (clazz == Date.class) {
-                ReflectUtil.setObjectValue(obj, field, value);
+                ReflectUtils.setObjectValue(obj, field, value);
             } else if (clazz == String.class) {
-                ReflectUtil.setObjectValue(obj, field, value.toString());
+                ReflectUtils.setObjectValue(obj, field, value.toString());
             } else if (clazz == Long.class || clazz == long.class) {
                 Date d = (Date) value;
-                ReflectUtil.setObjectValue(obj, field, d.getTime());
+                ReflectUtils.setObjectValue(obj, field, d.getTime());
             } else {
                 throw new IllegalStateException("can not cast java.util.Date to " + clazz.getName());
             }
         } else {
-            ReflectUtil.setObjectValue(obj, field, value);
+            ReflectUtils.setObjectValue(obj, field, value);
         }
     }
 

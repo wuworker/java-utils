@@ -1,6 +1,6 @@
 package com.wxl.utils.security;
 
-import com.wxl.utils.DataUtil;
+import com.wxl.utils.DataUtils;
 import org.springframework.util.Assert;
 
 import javax.crypto.Cipher;
@@ -15,34 +15,34 @@ import java.security.spec.X509EncodedKeySpec;
  * Created by wuxingle on 2017/9/10 0010.
  * 加解密工具类
  */
-public class CryptionUtil {
+public class SecurityUtils {
 
     /**
      * byte转16进制字符串
      */
     public static String toHex(byte[] bytes){
-        return DataUtil.toHex(bytes);
+        return DataUtils.toHex(bytes);
     }
 
     /**
      * 16进制字符串转byte
      */
     public static byte[] fromHex(String hex){
-        return DataUtil.toByte(hex);
+        return DataUtils.toByte(hex);
     }
 
     /**
      * 转为Base64字符串
      */
     public static String toBase64(byte[] bytes){
-        return BASE64Util.encodeToString(bytes);
+        return Base64Utils.encodeToString(bytes);
     }
 
     /**
      * 从Base64字符串转为byte
      */
     public static byte[] fromBase64(String base64){
-        return BASE64Util.decodeFromString(base64);
+        return Base64Utils.decodeFromString(base64);
     }
 
     /**

@@ -1,6 +1,6 @@
 package com.wxl.utils.net.jdbc.impl;
 
-import com.wxl.utils.AliasUtil;
+import com.wxl.utils.AliasUtils;
 import com.wxl.utils.net.jdbc.JdbcMapping;
 
 /**
@@ -15,7 +15,7 @@ public class SnakeToCamelMapping implements JdbcMapping{
      */
     @Override
     public String mapping(String name) {
-        return AliasUtil.snakeToCamel(name);
+        return AliasUtils.snakeToCamel(name);
     }
 
 

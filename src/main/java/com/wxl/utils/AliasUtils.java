@@ -6,7 +6,7 @@ import org.springframework.util.StringUtils;
  * Created by wuxingle on 2017/11/24.
  * 别名工具类
  */
-public class AliasUtil {
+public class AliasUtils {
 
     /**
      * 蛇形命名转驼峰

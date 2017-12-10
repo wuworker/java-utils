@@ -1,6 +1,6 @@
 package com.wxl.utils.excel;
 
-import com.wxl.utils.ReflectUtil;
+import com.wxl.utils.ReflectUtils;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.*;
 import org.springframework.util.Assert;
@@ -19,7 +19,7 @@ import java.util.Map;
  * Created by wuxingle on 2017/10/21 0021.
  * excel导入工具类
  */
-public class ExcelImportUtil {
+public class ExcelImportUtils {
 
     /**
      * 获取workbook
@@ -185,7 +185,7 @@ public class ExcelImportUtil {
         } else {
             throw new IllegalStateException("can not cast field type:" + clazz.getName());
         }
-        ReflectUtil.setObjectValue(obj, field, value);
+        ReflectUtils.setObjectValue(obj, field, value);
     }
 
     /**

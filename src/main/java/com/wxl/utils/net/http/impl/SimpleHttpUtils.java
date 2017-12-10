@@ -4,7 +4,7 @@ import com.wxl.utils.annotation.ThreadSafe;
 import com.wxl.utils.net.http.HttpHeader;
 import com.wxl.utils.net.http.HttpRequested;
 import com.wxl.utils.net.http.HttpResponsed;
-import com.wxl.utils.net.http.HttpUtil;
+import com.wxl.utils.net.http.HttpUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.ObjectUtils;
 
@@ -25,14 +25,14 @@ import static com.wxl.utils.net.http.HttpMethod.*;
  */
 @Slf4j
 @ThreadSafe
-public class SimpleHttpUtil extends HttpUtil {
+public class SimpleHttpUtils extends HttpUtils {
 
     //http支持方法
     private static String[] supportMethods = {
             GET, HEAD, POST, PUT, DELETE, OPTIONS, TRACE
     };
 
-    private SimpleHttpUtil(
+    private SimpleHttpUtils(
             String requestCharset,
             int connectTimeout,
             int readTimeout) {
@@ -42,7 +42,7 @@ public class SimpleHttpUtil extends HttpUtil {
     /**
      * 获取默认配置
      */
-    public static SimpleHttpUtil createDefault() {
+    public static SimpleHttpUtils createDefault() {
         return new Builder().build();
     }
 
@@ -130,7 +130,7 @@ public class SimpleHttpUtil extends HttpUtil {
         int length = urlConnection.getContentLength();
         //获取响应体
 
-        byte[] data = HttpUtil.readBytes(urlConnection.getInputStream(), length);
+        byte[] data = HttpUtils.readBytes(urlConnection.getInputStream(), length);
         log.info("read body length:{}", data.length);
 
         httpResponsed.setBody(data);
@@ -142,13 +142,13 @@ public class SimpleHttpUtil extends HttpUtil {
     /**
      * http的一些简单配置
      */
-    public static class Builder extends HttpUtil.Builder {
+    public static class Builder extends HttpUtils.Builder {
 
         private Builder() {
         }
 
-        public SimpleHttpUtil build() {
-            return new SimpleHttpUtil(
+        public SimpleHttpUtils build() {
+            return new SimpleHttpUtils(
                     requestCharset,
                     connectTimeout,
                     readTimeout

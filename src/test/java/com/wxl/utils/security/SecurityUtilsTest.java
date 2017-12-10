@@ -2,13 +2,13 @@ package com.wxl.utils.security;
 
 import org.junit.Test;
 
-import static com.wxl.utils.security.CryptionUtil.*;
+import static com.wxl.utils.security.SecurityUtils.*;
 
 /**
  * Created by wuxingle on 2017/9/11 0011.
  *
  */
-public class CryptionUtilTest {
+public class SecurityUtilsTest {
 
     @Test
     public void testdoMD5() throws Exception {
@@ -81,7 +81,7 @@ public class CryptionUtilTest {
     @Test
     public void testdoAES() throws Exception {
         String pass = "123456";
-        byte[] key = KeyGeneratorUtil.generateAESKey();
+        byte[] key = KeyGeneratorUtils.generateAESKey();
         System.out.println("密钥长度:"+key.length*8);
         System.out.println(toHex(key));
 
@@ -99,7 +99,7 @@ public class CryptionUtilTest {
     @Test
     public void testdoRSA() throws Exception {
         String pass = "123456";
-        byte[][] keyPair = KeyGeneratorUtil.generateRSAKey1024();
+        byte[][] keyPair = KeyGeneratorUtils.generateRSAKey1024();
         byte[] privateKey = keyPair[0];
         byte[] publicKey = keyPair[1];
 

@@ -6,7 +6,7 @@ import org.springframework.util.Assert;
  * Created by wuxingle on 2017/9/7 0007.
  * 数据相关工具类
  */
-public class DataUtil {
+public class DataUtils {
 
     /**
      * byte转16进制字符串
@@ -14,7 +14,7 @@ public class DataUtil {
     public static String toHex(byte[] bytes) {
         Assert.notNull(bytes,"toHex bytes can not null");
         char[] chars = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-        StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder(bytes.length * 2);
         for (byte b : bytes) {
             sb.append(chars[(b & 0xff) >> 4]);
             sb.append(chars[(b & 0x0f)]);

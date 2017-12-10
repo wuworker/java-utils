@@ -3,7 +3,7 @@ package com.wxl.utils.net.http.impl;
 import com.wxl.utils.net.http.HttpMethod;
 import com.wxl.utils.net.http.HttpRequested;
 import com.wxl.utils.net.http.HttpResponsed;
-import com.wxl.utils.net.http.HttpUtil;
+import com.wxl.utils.net.http.HttpUtils;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -19,7 +19,7 @@ public class HttpClientUtilTest {
 
     @Test
     public void doGet() throws Exception {
-        HttpUtil httpUtil = HttpClientUtil.custom()
+        HttpUtils httpUtils = HttpClientUtils.custom()
                 .setConnectTimeout(10000)
                 .setConRequestTimeout(10000)
                 .setReadTimeout(10000)
@@ -30,87 +30,87 @@ public class HttpClientUtilTest {
         requested.addParam("age","23");
         requested.setConTimeout(3000);
         requested.setReadTimeout(3000);
-        HttpResponsed responsed = httpUtil.doGet(requested,false);
+        HttpResponsed responsed = httpUtils.doGet(requested,false);
 
         System.out.println(responsed.getStringBody("utf-8"));
     }
 
     @Test
     public void doHead()throws Exception{
-        HttpUtil httpUtil = HttpClientUtil.createDefault();
+        HttpUtils httpUtils = HttpClientUtils.createDefault();
 
-        Map<String,String> heads = httpUtil.doHead("http://localhost:8888/simple/all");
+        Map<String,String> heads = httpUtils.doHead("http://localhost:8888/simple/all");
 
         System.out.println(heads);
     }
 
     @Test
     public void doPOST()throws Exception{
-        HttpUtil httpUtil = HttpClientUtil.createDefault();
+        HttpUtils httpUtils = HttpClientUtils.createDefault();
 
         String body = "{\"name\":\"hahahha\",\"age\":303}";
 
         Map<String,String> heads = new HashMap<>();
         heads.put("Content-Type","application/json");
 
-        byte[] res = httpUtil.doPost("http://localhost:8888/simple/json",body.getBytes(),heads);
+        byte[] res = httpUtils.doPost("http://localhost:8888/simple/json",body.getBytes(),heads);
 
         System.out.println(new String(res));
     }
 
     @Test
     public void doPUT()throws Exception{
-        HttpUtil httpUtil = HttpClientUtil.createDefault();
+        HttpUtils httpUtils = HttpClientUtils.createDefault();
 
         String body = "{\"name\":\"hahahha\",\"age\":303}";
 
         Map<String,String> heads = new HashMap<>();
         heads.put("Content-Type","application/json");
 
-        byte[] res = httpUtil.doPut("http://localhost:8888/simple/json",body.getBytes(),heads);
+        byte[] res = httpUtils.doPut("http://localhost:8888/simple/json",body.getBytes(),heads);
 
         System.out.println(new String(res));
     }
 
     @Test
     public void doPATCH()throws Exception{
-        HttpUtil httpUtil = HttpClientUtil.createDefault();
+        HttpUtils httpUtils = HttpClientUtils.createDefault();
 
         String body = "{\"name\":\"hahahha\",\"age\":303}";
 
         Map<String,String> heads = new HashMap<>();
         heads.put("Content-Type","application/json");
 
-        byte[] res = httpUtil.doPatch("http://localhost:8888/simple/json",body.getBytes(),heads);
+        byte[] res = httpUtils.doPatch("http://localhost:8888/simple/json",body.getBytes(),heads);
 
         System.out.println(new String(res));
     }
 
     @Test
     public void doDelete()throws Exception{
-        HttpUtil httpUtil = HttpClientUtil.createDefault();
+        HttpUtils httpUtils = HttpClientUtils.createDefault();
 
-        byte[] res  = httpUtil.doDelete("http://localhost:8888/simple/all");
+        byte[] res  = httpUtils.doDelete("http://localhost:8888/simple/all");
 
         System.out.println(new String(res));
     }
 
     @Test
     public void doOptions()throws Exception{
-        HttpUtil httpUtil = HttpClientUtil.createDefault();
+        HttpUtils httpUtils = HttpClientUtils.createDefault();
 
-        List<String> methods = httpUtil.doOptions("http://localhost:8888/simple/all");
+        List<String> methods = httpUtils.doOptions("http://localhost:8888/simple/all");
 
         System.out.println(methods);
     }
 
     @Test
     public void doTrace()throws Exception{
-        HttpUtil httpUtil = HttpClientUtil.createDefault();
+        HttpUtils httpUtils = HttpClientUtils.createDefault();
         HttpRequested requested = new HttpRequested("https://www.baidu.com/");
         requested.setMethod(HttpMethod.TRACE);
 
-        HttpResponsed responsed = httpUtil.execute(requested);
+        HttpResponsed responsed = httpUtils.execute(requested);
 
         System.out.println(responsed.getStatusLine());
 
