@@ -35,8 +35,17 @@ public class RandomUtils {
     ).split(",");
 
 
-    public interface RandomGenerator<T> {
-        T generate(Random random);
+    /**
+     * 产生一定范围的int
+     */
+    public static int generateInt(int min,int max){
+        return generateInt(new Random(),min,max);
+    }
+
+    public static int generateInt(Random random,int min,int max){
+        Assert.notNull(random, "random can not null");
+        Assert.isTrue(max > min && min >= 0, "max must > min and >= 0");
+        return random.nextInt(max - min) + min;
     }
 
 

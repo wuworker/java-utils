@@ -6,6 +6,7 @@ import org.springframework.util.ReflectionUtils;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
 
 /**
  * Created by wuxingle on 2017/10/21 0021.
@@ -101,20 +102,42 @@ public class ReflectUtils {
         }
     }
 
+
+    /**
+     * 把int数值转为对应的类
+     */
+    public static Object convertNumber(Class<?> clazz, int value) {
+        Assert.notNull(clazz, "class can not null");
+        Assert.notNull(value, "value can not null");
+        if (isNumber(clazz)) {
+            if (clazz == Long.class || clazz == long.class) {
+                return (long) value;
+            } else if (clazz == Integer.class || clazz == int.class) {
+                return value;
+            } else if (clazz == Short.class || clazz == short.class) {
+                return (short) value;
+            } else if (clazz == Character.class || clazz == char.class) {
+                return (char) value;
+            } else if (clazz == Byte.class || clazz == byte.class) {
+                return (byte) value;
+            } else if (clazz == Float.class || clazz == float.class) {
+                return (float) value;
+            } else if (clazz == Double.class || clazz == double.class) {
+                return (double) value;
+            } else if (clazz == BigDecimal.class) {
+                return new BigDecimal(value);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 判断是否是数值
+     */
     public static boolean isNumber(Class<?> clazz) {
         return Number.class.isAssignableFrom(clazz)
-                || isPrimitiveNumber(clazz);
+                || (clazz.isPrimitive() && clazz != boolean.class);
     }
 
-
-    public static boolean isPrimitiveNumber(Class<?> clazz) {
-        return clazz == byte.class
-                || clazz == short.class
-                || clazz == char.class
-                || clazz == int.class
-                || clazz == float.class
-                || clazz == long.class
-                || clazz == double.class;
-    }
 
 }
