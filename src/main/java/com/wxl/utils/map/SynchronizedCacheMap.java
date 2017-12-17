@@ -1,7 +1,8 @@
-package com.wxl.utils.map.impl;
+package com.wxl.utils.map;
 
 import com.wxl.utils.annotation.ThreadSafe;
 import com.wxl.utils.map.CacheMap;
+import com.wxl.utils.map.LazyCacheMap;
 import org.springframework.util.Assert;
 
 import java.io.IOException;
@@ -54,7 +55,7 @@ public class SynchronizedCacheMap<K, V> extends AbstractMap<K, V>
     /**
      * 获取锁
      */
-    public Object getSynchronizedLock(){
+    public Object getLock(){
         return lockProxyMap;
     }
 
@@ -246,4 +247,6 @@ public class SynchronizedCacheMap<K, V> extends AbstractMap<K, V>
     public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction) {
         return lockProxyMap.merge(key,value,remappingFunction);
     }
+
+
 }

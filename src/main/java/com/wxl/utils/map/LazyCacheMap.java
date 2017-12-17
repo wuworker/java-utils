@@ -1,7 +1,6 @@
-package com.wxl.utils.map.impl;
+package com.wxl.utils.map;
 
 import com.wxl.utils.annotation.UnThreadSafe;
-import com.wxl.utils.map.CacheMap;
 import org.springframework.util.Assert;
 
 import java.io.IOException;
@@ -25,8 +24,8 @@ import java.util.function.Predicate;
  * 如果最后一个仍是过期,则返回过期数据!
  */
 @UnThreadSafe
-public class LazyCacheMap<K, V> extends AbstractMap<K, V>
-        implements CacheMap<K, V>, Serializable, Cloneable {
+public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
+        implements Serializable, Cloneable {
 
     private static final long serialVersionUID = 4916775860465620257L;
 
@@ -303,13 +302,6 @@ public class LazyCacheMap<K, V> extends AbstractMap<K, V>
     }
 
     /**
-     * 是否是过期的时间
-     */
-    private boolean isExpireTime(long expire) {
-        return expire <= 0 && expire != PERSISTENT_KEY;
-    }
-
-    /**
      * 移除entry
      */
     private CacheEntry<K,V> removeEntry(Object key){
@@ -323,7 +315,7 @@ public class LazyCacheMap<K, V> extends AbstractMap<K, V>
     /**
      * entry
      */
-    public static class CacheEntry<K, V> extends SimpleEntry<K, V> {
+    private static class CacheEntry<K, V> extends SimpleEntry<K, V> {
         private static final long serialVersionUID = -8977888694870171813L;
 
         private Long expire;
@@ -360,9 +352,9 @@ public class LazyCacheMap<K, V> extends AbstractMap<K, V>
         public String toString() {
             return
                     //expire == null ?
-                 //   getKey() + "=" + getValue() + "(Persistent)"
-                 //   : getKey() + "=" + getValue() + "(" + ttl() + ")";
-            getKey()+"="+getValue();
+                    //   getKey() + "=" + getValue() + "(Persistent)"
+                    //   : getKey() + "=" + getValue() + "(" + ttl() + ")";
+                    getKey()+"="+getValue();
         }
     }
 

@@ -14,6 +14,12 @@ import java.util.*;
  */
 public class RandomUtils {
 
+
+    public interface RandomGenerator<T> {
+        T generate(Random random);
+    }
+
+
     /**
      * 手机号码前缀
      * 移动：134/135/136/137/138/139/150/151/152/157/158/159/182/183/184/187/188/147/178
@@ -38,11 +44,11 @@ public class RandomUtils {
     /**
      * 产生一定范围的int
      */
-    public static int generateInt(int min,int max){
-        return generateInt(new Random(),min,max);
+    public static int generateInt(int min, int max) {
+        return generateInt(new Random(), min, max);
     }
 
-    public static int generateInt(Random random,int min,int max){
+    public static int generateInt(Random random, int min, int max) {
         Assert.notNull(random, "random can not null");
         Assert.isTrue(max > min && min >= 0, "max must > min and >= 0");
         return random.nextInt(max - min) + min;
@@ -92,13 +98,13 @@ public class RandomUtils {
         Assert.isTrue(length > 0, "length must > 0");
         StringBuilder sb = new StringBuilder(length);
         for (int i = 0; i < length; i++) {
-            if (random.nextBoolean()) {
-                sb.append(random.nextInt(10));
+            int n = random.nextInt(62);
+            if (n < 10) {
+                sb.append(n);
+            } else if (n < 36) {
+                sb.append((char) ('a' - 10 + n));
             } else {
-                boolean isUp = random.nextBoolean();
-                char c = (char) (isUp ? random.nextInt(26) + 'a'
-                        : random.nextInt(26) + 'A');
-                sb.append(c);
+                sb.append((char) ('A' - 36 + n));
             }
         }
         return sb.toString();

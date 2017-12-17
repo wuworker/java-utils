@@ -1,6 +1,8 @@
 package com.wxl.utils.map.impl;
 
 import com.wxl.utils.map.CacheMap;
+import com.wxl.utils.map.LazyCacheMap;
+import com.wxl.utils.map.SynchronizedCacheMap;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -11,6 +11,15 @@ import java.util.Random;
 public class RandomUtilsTest {
 
     @Test
+    public void testInteger(){
+        int i=1234;
+        int a = 123456789;
+
+        System.out.println(Integer.bitCount(i));
+        System.out.println(Integer.bitCount(a));
+    }
+
+    @Test
     public void testGenerateNum(){
         Random random = new Random(10);
         String num1 = RandomUtils.generateNum(random,6);
@@ -21,7 +30,6 @@ public class RandomUtilsTest {
         System.out.println(num2);
         System.out.println(num3);
     }
-
 
     @Test
     public void testGenerateAbcNum(){
