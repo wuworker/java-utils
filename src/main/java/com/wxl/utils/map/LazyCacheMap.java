@@ -19,7 +19,6 @@ import java.util.function.Predicate;
  * Created by wuxingle on 2017/12/1.
  * 延迟删除缓存map.
  * 当从map获取数据时，才清除过期数据.
- * 注意:
  * 在对map迭代时，当hasNext返回true时，next()拿到发现是过期数据，则自动获取下一个.
  * 如果最后一个仍是过期,则返回过期数据!
  */
@@ -49,8 +48,8 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         cacheMap = new HashMap<>(initialCapacity, loadFactor);
     }
 
-    public LazyCacheMap(Map<K, CacheEntry<K, V>> cacheMap){
-        Assert.notNull(cacheMap,"cacheMap can not null");
+    public LazyCacheMap(Map<K, CacheEntry<K, V>> cacheMap) {
+        Assert.notNull(cacheMap, "cacheMap can not null");
         this.cacheMap = cacheMap;
     }
 
@@ -122,7 +121,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
 
     @Override
     public Set<K> keySet() {
-        if(keySet == null){
+        if (keySet == null) {
             keySet = new KeySet();
         }
         return keySet;
@@ -130,7 +129,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
 
     @Override
     public Collection<V> values() {
-        if(values == null){
+        if (values == null) {
             values = new Values();
         }
         return values;
@@ -153,7 +152,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
                 it.remove();
                 continue;
             }
-            if(Objects.equals(value,entry.getValue())){
+            if (Objects.equals(value, entry.getValue())) {
                 return true;
             }
         }
@@ -215,7 +214,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
                 it.remove();
                 continue;
             }
-            action.accept(entry.getKey(),entry.getValue());
+            action.accept(entry.getKey(), entry.getValue());
         }
     }
 
@@ -228,7 +227,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
                 it.remove();
                 continue;
             }
-            V newValue = function.apply(entry.getKey(),entry.getValue());
+            V newValue = function.apply(entry.getKey(), entry.getValue());
             entry.setValue(newValue);
         }
     }
@@ -259,7 +258,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
      */
     @SuppressWarnings("unchecked")
     @Override
-    public LazyCacheMap<K, V> clone()throws CloneNotSupportedException {
+    public LazyCacheMap<K, V> clone() throws CloneNotSupportedException {
         clearExpire();
         LazyCacheMap<K, V> result;
         try {
@@ -268,16 +267,16 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             // this shouldn't happen, since we are Cloneable
             throw new InternalError(e);
         }
-        if(!(cacheMap instanceof Cloneable)){
+        if (!(cacheMap instanceof Cloneable)) {
             throw new CloneNotSupportedException("inner map don't implement cloneable!");
         }
         try {
             Method cloneMethod = cacheMap.getClass().getMethod("clone");
-            result.cacheMap = (Map<K, CacheEntry<K, V>>)cloneMethod.invoke(cacheMap);
+            result.cacheMap = (Map<K, CacheEntry<K, V>>) cloneMethod.invoke(cacheMap);
         } catch (NoSuchMethodException e) {
             throw new CloneNotSupportedException("inner map can not found clone method!");
-        } catch (IllegalAccessException|InvocationTargetException e){
-            throw new CloneNotSupportedException("inner map invoke clone method error:"+e.getMessage());
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new CloneNotSupportedException("inner map invoke clone method error:" + e.getMessage());
         }
 
         result.entrySet = null;
@@ -304,7 +303,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
     /**
      * 移除entry
      */
-    private CacheEntry<K,V> removeEntry(Object key){
+    private CacheEntry<K, V> removeEntry(Object key) {
         CacheEntry<K, V> value = cacheMap.remove(key);
         if (value == null) {
             return null;
@@ -350,26 +349,47 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
 
         @Override
         public String toString() {
-            return
-                    //expire == null ?
-                    //   getKey() + "=" + getValue() + "(Persistent)"
-                    //   : getKey() + "=" + getValue() + "(" + ttl() + ")";
-                    getKey()+"="+getValue();
+            return expire == null ?
+                    getKey() + "=" + getValue() + "(Persistent)"
+                    : getKey() + "=" + getValue() + "(" + ttl() + ")";
+
         }
     }
 
 
     final class KeySet extends AbstractSet<K> {
-        public int size() {return LazyCacheMap.this.size();}
-        public void clear() {LazyCacheMap.this.clear();}
-        public Iterator<K> iterator() {return new KeyIterator();}
-        public boolean contains(Object o) {return LazyCacheMap.this.containsKey(o);}
-        public boolean remove(Object o) { return removeEntry(o) != null; }
-        public boolean removeIf(Predicate<? super K> filter) {
-            return cacheMap.entrySet().removeIf((e)-> !e.getValue().isExpire() && filter.test(e.getValue().getKey()));
+        public int size() {
+            return LazyCacheMap.this.size();
         }
-        public void forEach(Consumer<? super K> action) { LazyCacheMap.this.forEach((k,v)->action.accept(k)); }
-        public Spliterator<K> spliterator() {return new KeySpliterator();}
+
+        public void clear() {
+            LazyCacheMap.this.clear();
+        }
+
+        public Iterator<K> iterator() {
+            return new KeyIterator();
+        }
+
+        public boolean contains(Object o) {
+            return LazyCacheMap.this.containsKey(o);
+        }
+
+        public boolean remove(Object o) {
+            return removeEntry(o) != null;
+        }
+
+        public boolean removeIf(Predicate<? super K> filter) {
+            return cacheMap.entrySet().removeIf((e) -> !e.getValue().isExpire() && filter.test(e.getValue().getKey()));
+        }
+
+        public void forEach(Consumer<? super K> action) {
+            LazyCacheMap.this.forEach((k, v) -> action.accept(k));
+        }
+
+        public Spliterator<K> spliterator() {
+            return new KeySpliterator();
+        }
+
         public String toString() {
             Iterator<Entry<K, CacheEntry<K, V>>> it = cacheMap.entrySet().iterator();
             StringBuilder sb = new StringBuilder("{");
@@ -389,25 +409,43 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
 
 
     final class Values extends AbstractCollection<V> {
-        public int size() {return LazyCacheMap.this.size();}
-        public void clear() {LazyCacheMap.this.clear();}
-        public Iterator<V> iterator() {return new ValueIterator();}
-        public boolean contains(Object o) {return LazyCacheMap.this.containsValue(o);}
-        public boolean removeIf(Predicate<? super V> filter) {
-            return cacheMap.entrySet().removeIf((e)-> !e.getValue().isExpire() && filter.test(e.getValue().getValue()));
+        public int size() {
+            return LazyCacheMap.this.size();
         }
-        public void forEach(Consumer<? super V> action) { LazyCacheMap.this.forEach((k,v)->action.accept(v)); }
-        public Spliterator<V> spliterator() {return new ValueSpliterator();}
+
+        public void clear() {
+            LazyCacheMap.this.clear();
+        }
+
+        public Iterator<V> iterator() {
+            return new ValueIterator();
+        }
+
+        public boolean contains(Object o) {
+            return LazyCacheMap.this.containsValue(o);
+        }
+
+        public boolean removeIf(Predicate<? super V> filter) {
+            return cacheMap.entrySet().removeIf((e) -> !e.getValue().isExpire() && filter.test(e.getValue().getValue()));
+        }
+
+        public void forEach(Consumer<? super V> action) {
+            LazyCacheMap.this.forEach((k, v) -> action.accept(v));
+        }
+
+        public Spliterator<V> spliterator() {
+            return new ValueSpliterator();
+        }
 
         public boolean remove(Object o) {
             Iterator<Entry<K, CacheEntry<K, V>>> it = cacheMap.entrySet().iterator();
-            while (it.hasNext()){
+            while (it.hasNext()) {
                 CacheEntry<K, V> value = it.next().getValue();
-                if(value.isExpire()){
+                if (value.isExpire()) {
                     it.remove();
                     continue;
                 }
-                if(Objects.equals(o,value.getValue())){
+                if (Objects.equals(o, value.getValue())) {
                     it.remove();
                     return true;
                 }
@@ -434,14 +472,29 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
 
 
     final class EntrySet extends AbstractSet<Entry<K, V>> {
-        public int size() { return LazyCacheMap.this.size(); }
-        public void clear() { LazyCacheMap.this.clear(); }
-        public Iterator<Entry<K, V>> iterator() {return new EntryIterator();}
-        public String toString() {return LazyCacheMap.this.toString();}
-        public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
-            return cacheMap.entrySet().removeIf((e)->!e.getValue().isExpire() && filter.test(e.getValue()));
+        public int size() {
+            return LazyCacheMap.this.size();
         }
-        public Spliterator<Entry<K, V>> spliterator() {return new EntrySpliterator();}
+
+        public void clear() {
+            LazyCacheMap.this.clear();
+        }
+
+        public Iterator<Entry<K, V>> iterator() {
+            return new EntryIterator();
+        }
+
+        public String toString() {
+            return LazyCacheMap.this.toString();
+        }
+
+        public boolean removeIf(Predicate<? super Entry<K, V>> filter) {
+            return cacheMap.entrySet().removeIf((e) -> !e.getValue().isExpire() && filter.test(e.getValue()));
+        }
+
+        public Spliterator<Entry<K, V>> spliterator() {
+            return new EntrySpliterator();
+        }
 
         public boolean contains(Object o) {
             if (o instanceof Entry) {
@@ -520,32 +573,38 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
     }
 
     class KeyIterator extends CacheIterator implements Iterator<K> {
-        public K next() { return nextEntry().getKey(); }
+        public K next() {
+            return nextEntry().getKey();
+        }
     }
 
     class ValueIterator extends CacheIterator implements Iterator<V> {
-        public V next() { return nextEntry().getValue(); }
+        public V next() {
+            return nextEntry().getValue();
+        }
     }
 
     class EntryIterator extends CacheIterator implements Iterator<Entry<K, V>> {
-        public Entry<K, V> next() { return nextEntry(); }
+        public Entry<K, V> next() {
+            return nextEntry();
+        }
     }
 
 
     //--------Spliterator----
-    abstract class CacheSpliterator{
+    abstract class CacheSpliterator {
         int index;
         int fence;
         final List<CacheEntry<K, V>> cacheList;
 
-        CacheSpliterator(){
+        CacheSpliterator() {
             clearExpire();
             this.cacheList = new ArrayList<>(cacheMap.values());
             index = 0;
             fence = cacheList.size();
         }
 
-        CacheSpliterator(List<CacheEntry<K, V>> cacheList, int index, int fence){
+        CacheSpliterator(List<CacheEntry<K, V>> cacheList, int index, int fence) {
             this.cacheList = cacheList;
             this.index = index;
             this.fence = fence;
@@ -562,12 +621,12 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
 
 
     final class KeySpliterator extends CacheSpliterator implements Spliterator<K> {
-        KeySpliterator(){
+        KeySpliterator() {
             super();
         }
 
-        private KeySpliterator(List<CacheEntry<K, V>> cacheList, int index, int fence){
-           super(cacheList,index,fence);
+        private KeySpliterator(List<CacheEntry<K, V>> cacheList, int index, int fence) {
+            super(cacheList, index, fence);
         }
 
         @Override
@@ -592,11 +651,12 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
     }
 
     final class ValueSpliterator extends CacheSpliterator implements Spliterator<V> {
-        ValueSpliterator(){
+        ValueSpliterator() {
             super();
         }
-        private ValueSpliterator(List<CacheEntry<K, V>> cacheList, int index, int fence){
-            super(cacheList,index,fence);
+
+        private ValueSpliterator(List<CacheEntry<K, V>> cacheList, int index, int fence) {
+            super(cacheList, index, fence);
         }
 
         @Override
@@ -624,8 +684,9 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         EntrySpliterator() {
             super();
         }
+
         private EntrySpliterator(List<CacheEntry<K, V>> cacheList, int index, int fence) {
-            super(cacheList,index,fence);
+            super(cacheList, index, fence);
         }
 
         @Override

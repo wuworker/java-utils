@@ -1,7 +1,5 @@
 package com.wxl.utils;
 
-import org.springframework.util.Assert;
-
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -28,8 +26,6 @@ public class DateUtils {
     }
 
     public static String format(Date date,DateFormat dateFormat){
-        Assert.notNull(date,"date can not null");
-        Assert.notNull(dateFormat,"dateFormat can not null");
         return dateFormat.format(date);
     }
 
@@ -45,8 +41,6 @@ public class DateUtils {
     }
 
     public static Date parse(String date,DateFormat dateFormat){
-        Assert.hasText(date,"date can not empty");
-        Assert.notNull(dateFormat,"dateFormat can not null");
         try {
             return dateFormat.parse(date);
         } catch (ParseException e) {
@@ -54,10 +48,32 @@ public class DateUtils {
         }
     }
 
+    /**
+     * 输入日期是否是将来的时间
+     * @param date 输入日期
+     */
+    public static boolean isFuture(Date date){
+        return date.getTime() - System.currentTimeMillis() > 0;
+    }
+
+    public static boolean isFuture(String date,String format){
+        return isFuture(parse(date,format));
+    }
 
 
+    /**
+     * 当前时间是否在输入时间内
+     */
+    public static boolean nowInTime(Date start,Date end){
+        long now = System.currentTimeMillis();
+        return now - start.getTime() > 0
+                && end.getTime() - now > 0;
+    }
 
-
+    public static boolean nowInTime(String start,String end,String format){
+        SimpleDateFormat df = new SimpleDateFormat(format);
+        return nowInTime(parse(start,df),parse(end,df));
+    }
 
 
 

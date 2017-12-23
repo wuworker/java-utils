@@ -16,6 +16,7 @@ public class AliasUtilsTest {
         String s4 = AliasUtils.snakeToCamel("app_user_mobile_phone");
         String s5 = AliasUtils.snakeToCamel("_app_user__mobile_phone_");
         String s6 = AliasUtils.snakeToCamel("abc___abc_");
+        String s7 = AliasUtils.snakeToCamel("abcDFs");
 
         System.out.println(s1);
         System.out.println(s2);
@@ -23,6 +24,7 @@ public class AliasUtilsTest {
         System.out.println(s4);
         System.out.println(s5);
         System.out.println(s6);
+        System.out.println(s7);
     }
 
     @Test
