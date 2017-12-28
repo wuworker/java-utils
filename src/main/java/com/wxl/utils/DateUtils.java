@@ -3,6 +3,8 @@ package com.wxl.utils;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.Period;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -19,10 +21,6 @@ public class DateUtils {
     /**
      * 日期格式化
      */
-    public static String format(Date date) {
-        return format(date, DEFAULT_FORMAT);
-    }
-
     public static String format(Date date, String format) {
         return format(date, new SimpleDateFormat(format));
     }
@@ -34,10 +32,6 @@ public class DateUtils {
     /**
      * 日期解析
      */
-    public static Date parse(String date) {
-        return parse(date, DEFAULT_FORMAT);
-    }
-
     public static Date parse(String date, String dateFormat) {
         return parse(date, new SimpleDateFormat(dateFormat));
     }
@@ -68,9 +62,9 @@ public class DateUtils {
      * 当前时间是否在输入时间内
      */
     public static boolean nowInTime(Date start, Date end) {
-        long now = System.currentTimeMillis();
-        return now - start.getTime() > 0
-                && end.getTime() - now > 0;
+        Date now = new Date();
+        return start.before(now)
+                && end.after(now);
     }
 
     public static boolean nowInTime(String start, String end, String format) {
@@ -88,24 +82,24 @@ public class DateUtils {
         return new Date(System.currentTimeMillis() - (1000L * 24 * 3600 * dayAgo));
     }
 
-    public static String getDayAgo(int dayAgo, String format) {
-        return format(getDayAgo(dayAgo), format);
-    }
-
     public static Date getDayAgo(Date date, int dayAgo) {
         return new Date(date.getTime() - (1000L * 24 * 3600 * dayAgo));
     }
 
-    public static String getDayAgo(Date date, int dayAgo, String format) {
-        return format(getDayAgo(date, dayAgo), format);
+    public static String getDayAgo(String date, int dayAgo, String format) {
+        return format(getDayAgo(parse(date,format), dayAgo), format);
     }
 
 
     /**
      * 获取2个日期的天数差
+     * day2 - day1
      */
     public static int diffDay(Date day1, Date day2) {
-        return (int) ((day1.getTime() - day2.getTime()) / (1000L * 24 * 3600));
+        ZoneId zoneId = ZoneId.systemDefault();
+        Period period = Period.between(day1.toInstant().atZone(zoneId).toLocalDate()
+                , day2.toInstant().atZone(zoneId).toLocalDate());
+        return period.getDays();
     }
 
     public static int diffDay(String day1, String day2, String format) {
@@ -119,12 +113,14 @@ public class DateUtils {
     /**
      * 获取2个日期之间的所有Date
      * 间隔为天
-     *
      * @param start 包含起始时间
      * @param end   不包含结束时间
      */
-    public static List<Date> getDiffDays(Date start, Date end) {
-        int diff = diffDay(end, start);
+    public static List<Date> getBetweenDays(Date start, Date end) {
+        int diff = diffDay(start, end);
+        if (diff < 0) {
+            return new ArrayList<>();
+        }
         List<Date> list = new ArrayList<>(diff);
         for (int i = 0; i < diff; i++) {
             list.add(getDayAgo(start, -i));
@@ -132,19 +128,20 @@ public class DateUtils {
         return list;
     }
 
-    public static List<String> getDiffDays(String start, String end, String format) {
+    public static List<String> getBetweenDays(String start, String end, String format) {
         DateFormat df = new SimpleDateFormat(format);
-        List<Date> dates = getDiffDays(parse(start, df), parse(end, df));
-        List<String> list = new ArrayList<>(dates.size());
-        for (Date date : dates) {
-            list.add(format(date, df));
+        Date s = parse(start, df);
+        Date e = parse(end, df);
+        int diff = diffDay(s, e);
+        if (diff < 0) {
+            return new ArrayList<>();
+        }
+        List<String> list = new ArrayList<>(diff);
+        for (int i = 0; i < diff; i++) {
+            list.add(format(getDayAgo(s, -i), df));
         }
         return list;
     }
-
-
-
-
 
 
 }
