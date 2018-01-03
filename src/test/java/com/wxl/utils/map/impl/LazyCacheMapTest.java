@@ -1,7 +1,7 @@
 package com.wxl.utils.map.impl;
 
 import com.wxl.utils.map.CacheMap;
-import com.wxl.utils.map.LazyCacheMap;
+import com.wxl.utils.map.LazyCacheMap2;
 import org.junit.Assert;
 import org.junit.Test;
 import org.springframework.util.SerializationUtils;
@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
  */
 public class LazyCacheMapTest {
 
-    private static CacheMap<Integer,String> cacheMap = new LazyCacheMap<>();
+    private static CacheMap<Integer,String> cacheMap = new LazyCacheMap2<>();
 
     @Test
     public void setExpire() throws Exception {
@@ -361,7 +361,7 @@ public class LazyCacheMapTest {
         cacheMap.put(2,"b",500);
         cacheMap.put(3,"c",1000);
 
-        LazyCacheMap<Integer, String> clone2 = ((LazyCacheMap<Integer, String>) cacheMap).clone();
+        LazyCacheMap2<Integer, String> clone2 = ((LazyCacheMap2<Integer, String>) cacheMap).clone();
         System.out.println(clone2);
 
         System.out.println(cacheMap == clone2);

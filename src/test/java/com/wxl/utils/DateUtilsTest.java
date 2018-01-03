@@ -44,7 +44,7 @@ public class DateUtilsTest {
         String d1 = "2017-12-28 22:00:12";
         String d2 = "2017-12-31 01:00:12";
 
-        int diff = DateUtils.diffDay(d1,d2,"yyyy-MM-dd HH:mm:ss");
+        int diff = DateUtils.betweenDay(d1,d2,"yyyy-MM-dd HH:mm:ss");
         System.out.println(diff);
 
         Date dd1 = DateUtils.parse(d1,"yyyy-MM-dd HH:mm:ss");

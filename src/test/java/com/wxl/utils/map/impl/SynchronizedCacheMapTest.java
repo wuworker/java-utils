@@ -1,7 +1,7 @@
 package com.wxl.utils.map.impl;
 
 import com.wxl.utils.map.CacheMap;
-import com.wxl.utils.map.LazyCacheMap;
+import com.wxl.utils.map.LazyCacheMap2;
 import com.wxl.utils.map.SynchronizedCacheMap;
 import org.junit.Assert;
 import org.junit.Test;
@@ -25,7 +25,7 @@ public class SynchronizedCacheMapTest {
     @Test
     public void testUnSync() {
         Map<Integer, String> map = new HashMap<>();
-        CacheMap<Integer, String> cacheMap = new LazyCacheMap<>();
+        CacheMap<Integer, String> cacheMap = new LazyCacheMap2<>();
 
         test1(map,cacheMap);
 
@@ -41,7 +41,7 @@ public class SynchronizedCacheMapTest {
     @Test
     public void testSync() {
         Map<Integer, String> map = Collections.synchronizedMap(new HashMap<>());
-        CacheMap<Integer, String> cacheMap = new SynchronizedCacheMap<>(new LazyCacheMap<>());
+        CacheMap<Integer, String> cacheMap = new SynchronizedCacheMap<>(new LazyCacheMap2<>());
 
         test1(map,cacheMap);
 
@@ -91,7 +91,7 @@ public class SynchronizedCacheMapTest {
     @Test
     public void testUnSync2() {
         Map<Integer, String> map = new HashMap<>();
-        CacheMap<Integer, String> cacheMap = new LazyCacheMap<>();
+        CacheMap<Integer, String> cacheMap = new LazyCacheMap2<>();
         List<Exception> errors = new ArrayList<>();
         test2(map, cacheMap,errors);
 
@@ -101,7 +101,7 @@ public class SynchronizedCacheMapTest {
     @Test
     public void testSync2() {
         Map<Integer, String> map = Collections.synchronizedMap(new HashMap<>());
-        CacheMap<Integer, String> cacheMap = new SynchronizedCacheMap<>(new LazyCacheMap<>());
+        CacheMap<Integer, String> cacheMap = new SynchronizedCacheMap<>(new LazyCacheMap2<>());
         List<Exception> errors = new ArrayList<>();
         test2(map, cacheMap,errors);
 

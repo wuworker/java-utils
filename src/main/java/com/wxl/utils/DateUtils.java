@@ -95,18 +95,18 @@ public class DateUtils {
      * 获取2个日期的天数差
      * day2 - day1
      */
-    public static int diffDay(Date day1, Date day2) {
+    public static int betweenDay(Date day1, Date day2) {
         ZoneId zoneId = ZoneId.systemDefault();
         Period period = Period.between(day1.toInstant().atZone(zoneId).toLocalDate()
                 , day2.toInstant().atZone(zoneId).toLocalDate());
         return period.getDays();
     }
 
-    public static int diffDay(String day1, String day2, String format) {
+    public static int betweenDay(String day1, String day2, String format) {
         DateFormat df = new SimpleDateFormat(format);
         Date d1 = parse(day1, df);
         Date d2 = parse(day2, df);
-        return diffDay(d1, d2);
+        return betweenDay(d1, d2);
     }
 
 
@@ -117,7 +117,7 @@ public class DateUtils {
      * @param end   不包含结束时间
      */
     public static List<Date> getBetweenDays(Date start, Date end) {
-        int diff = diffDay(start, end);
+        int diff = betweenDay(start, end);
         if (diff < 0) {
             return new ArrayList<>();
         }
@@ -132,7 +132,7 @@ public class DateUtils {
         DateFormat df = new SimpleDateFormat(format);
         Date s = parse(start, df);
         Date e = parse(end, df);
-        int diff = diffDay(s, e);
+        int diff = betweenDay(s, e);
         if (diff < 0) {
             return new ArrayList<>();
         }

@@ -1,8 +1,6 @@
 package com.wxl.utils.map;
 
 import com.wxl.utils.annotation.ThreadSafe;
-import com.wxl.utils.map.CacheMap;
-import com.wxl.utils.map.LazyCacheMap;
 import org.springframework.util.Assert;
 
 import java.io.IOException;
@@ -31,17 +29,17 @@ public class SynchronizedCacheMap<K, V> extends AbstractMap<K, V>
     private final Map<K, V> lockProxyMap;
 
     public SynchronizedCacheMap() {
-        cacheMap = new LazyCacheMap<>();
+        cacheMap = new LazyCacheMap2<>();
         lockProxyMap = Collections.synchronizedMap(cacheMap);
     }
 
     public SynchronizedCacheMap(int initialCapacity) {
-        cacheMap = new LazyCacheMap<>(initialCapacity);
+        cacheMap = new LazyCacheMap2<>(initialCapacity);
         lockProxyMap = Collections.synchronizedMap(cacheMap);
     }
 
     public SynchronizedCacheMap(int initialCapacity, float loadFactor) {
-        cacheMap = new LazyCacheMap<>(initialCapacity, loadFactor);
+        cacheMap = new LazyCacheMap2<>(initialCapacity, loadFactor);
         lockProxyMap = Collections.synchronizedMap(cacheMap);
     }
 

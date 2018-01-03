@@ -32,6 +32,7 @@ public interface CacheMap<K,V> extends Map<K,V>{
      * 获取剩余存活时间
      * @return PERSISTENT_KEY  说明是永不过期的key
      *         NOT_EXIST_KEY   说明key不存在
+     * 返回-1不一定是持久化的key,有可能正好过期-1秒
      */
     long ttl(K key);
 
@@ -58,5 +59,34 @@ public interface CacheMap<K,V> extends Map<K,V>{
 
         return v;
     }
+
+
+    /**
+     * entry
+     */
+    interface CacheEntry<K,V> extends Entry<K,V> {
+
+        Long getExpire();
+
+        void setExpire(Long expire);
+
+        /**
+         * 是否过期
+         */
+        boolean isExpire();
+    }
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
 
