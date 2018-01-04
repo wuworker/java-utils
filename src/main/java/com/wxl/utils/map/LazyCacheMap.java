@@ -62,11 +62,11 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
     public LazyCacheMap(int initialCapacity, float loadFactor) {
         Assert.isTrue(initialCapacity >= 0,
                 "Illegal initial capacity: " + initialCapacity);
+        Assert.isTrue(loadFactor > 0 && !Float.isNaN(loadFactor),
+                "Illegal load factor: " + loadFactor);
         if (initialCapacity > MAXIMUM_CAPACITY) {
             initialCapacity = MAXIMUM_CAPACITY;
         }
-        Assert.isTrue(loadFactor > 0 && !Float.isNaN(loadFactor),
-                "Illegal load factor: " + loadFactor);
 
         this.threshold = tableSizeFor(initialCapacity);
         this.loadFactor = loadFactor;
@@ -305,8 +305,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
 
     /**
      * 返回的size可能是个过期值
-     * 调用size方法会遍历所有key
-     * 删除过期数据
+     * 调用size方法会遍历所有key,同时删除过期数据
      */
     @Override
     public int size() {
@@ -402,6 +401,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
 
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
+        Assert.notNull(m,"putAll map can not null");
         putMapEntries(m);
     }
 
@@ -572,7 +572,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         }
 
         public Spliterator<K> spliterator() {
-            return null;
+            return new KeySpliterator<>(LazyCacheMap.this,0,-1,0,0);
         }
 
         public void forEach(Consumer<? super K> action) {
@@ -604,6 +604,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
                 throw new ConcurrentModificationException();
             }
         }
+
     }
 
     @Override
@@ -617,7 +618,6 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
 
 
     final class Values extends AbstractCollection<V> {
-
         public int size() {
             return LazyCacheMap.this.size();
         }
@@ -635,7 +635,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         }
 
         public Spliterator<V> spliterator() {
-            return null;
+            return new ValueSpliterator<>(LazyCacheMap.this,0,-1,0,0);
         }
 
         public void forEach(Consumer<? super V> action) {
@@ -715,7 +715,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         }
 
         public Spliterator<Entry<K, V>> spliterator() {
-            return null;
+            return new EntrySpliterator<>(LazyCacheMap.this,0,-1,0,0);
         }
 
         public void forEach(Consumer<? super Entry<K, V>> action) {
@@ -1486,17 +1486,24 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
 
     //----------------------------spliterators----------------------------------------
 
+    /**
+     * 因为spliterator可以用在并发,
+     * 所以在遍历时会忽略过期的key,
+     * 但并不会进行删除
+     */
     static class LazyCacheMapSpliterators<K, V> {
         final LazyCacheMap<K, V> map;
         CacheNode<K, V> current;
+        //当前index
         int index;
-        //遍历的大小
+        //last index
         int fence;
+        //estimate size
         int est;
         int expectedModCount;
 
-        public LazyCacheMapSpliterators(LazyCacheMap<K, V> map, int index, int fence,
-                                        int est, int expectedModCount) {
+        LazyCacheMapSpliterators(LazyCacheMap<K, V> map, int index, int fence,
+                                 int est, int expectedModCount) {
             this.map = map;
             this.index = index;
             this.fence = fence;
@@ -1508,10 +1515,10 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             int hi;
             if ((hi = fence) < 0) {
                 LazyCacheMap<K, V> cacheMap = map;
-                est = map.size;
-                expectedModCount = map.modCount;
-                CacheNode<K, V>[] tab = map.table;
-                fence = tab == null ? 0 : tab.length;
+                est = cacheMap.size;
+                expectedModCount = cacheMap.modCount;
+                CacheNode<K, V>[] tab = cacheMap.table;
+                hi = fence = (tab == null ? 0 : tab.length);
             }
             return hi;
         }
@@ -1522,12 +1529,11 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         }
     }
 
-
     static class KeySpliterator<K, V> extends LazyCacheMapSpliterators<K, V>
             implements Spliterator<K> {
 
-        public KeySpliterator(LazyCacheMap<K, V> map, int index,
-                              int fence, int est, int expectedModCount) {
+        KeySpliterator(LazyCacheMap<K, V> map, int index,
+                       int fence, int est, int expectedModCount) {
             super(map, index, fence, est, expectedModCount);
         }
 
@@ -1543,35 +1549,51 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             } else {
                 mc = expectedModCount;
             }
-            if (tab != null && tab.length > 0 && (i = index) >= 0
+            if (tab != null && tab.length >= hi && (i = index) >= 0
                     && (i < (index = hi) || current != null)) {
-                CacheNode<K,V> n = current;
-                CacheNode<K,V> p = null;
+                CacheNode<K, V> n = current;
                 current = null;
                 long now = System.currentTimeMillis();
-                do{
-                    if(n == null){
+                do {
+                    if (n == null) {
                         n = tab[i++];
                     } else {
-                        if(n.isExpire(now)){
-                            if(p == null){
-                                tab[i] = n.next;
-                            } else {
-                                p.next = n.next;
-                            }
-
-                        } else {
-
+                        //略过过期key
+                        if (!n.isExpire(now)) {
+                            action.accept(n.key);
                         }
+                        n = n.next;
                     }
-                }while (n!=null || i < hi);
+                } while (n != null || i < hi);
+                if (mc != cacheMap.modCount) {
+                    throw new ConcurrentModificationException();
+                }
             }
-
-
         }
 
         @Override
         public boolean tryAdvance(Consumer<? super K> action) {
+            Assert.notNull(action, "action can not null");
+            CacheNode<K, V>[] tab = map.table;
+            int hi;
+            if (tab != null && tab.length >= (hi = getFence()) && index >= 0) {
+                long now = System.currentTimeMillis();
+                while (current != null || index < hi) {
+                    if (current == null) {
+                        current = tab[index++];
+                    } else {
+                        if (!current.isExpire(now)) {
+                            K k = current.key;
+                            action.accept(k);
+                            if (map.modCount != expectedModCount) {
+                                throw new ConcurrentModificationException();
+                            }
+                            return true;
+                        }
+                        current = current.next;
+                    }
+                }
+            }
             return false;
         }
 
@@ -1585,10 +1607,175 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
 
         @Override
         public int characteristics() {
-            return 0;
+            return (fence < 0 || est == map.size ? Spliterator.SIZED : 0) |
+                    Spliterator.DISTINCT;
+        }
+    }
+
+    static class ValueSpliterator<K, V> extends LazyCacheMapSpliterators<K, V>
+            implements Spliterator<V> {
+
+        ValueSpliterator(LazyCacheMap<K, V> map, int index,
+                         int fence, int est, int expectedModCount) {
+            super(map, index, fence, est, expectedModCount);
+        }
+
+        @Override
+        public void forEachRemaining(Consumer<? super V> action) {
+            Assert.notNull(action, "action can not null");
+            LazyCacheMap<K, V> cacheMap = map;
+            CacheNode<K, V>[] tab = cacheMap.table;
+            int hi, mc, i;
+            if ((hi = fence) < 0) {
+                hi = tab == null ? 0 : tab.length;
+                mc = expectedModCount = cacheMap.modCount;
+            } else {
+                mc = expectedModCount;
+            }
+            if (tab != null && tab.length >= hi && (i = index) >= 0
+                    && (i < (index = hi) || current != null)) {
+                CacheNode<K, V> n = current;
+                current = null;
+                long now = System.currentTimeMillis();
+                do {
+                    if (n == null) {
+                        n = tab[i++];
+                    } else {
+                        //略过过期key
+                        if (!n.isExpire(now)) {
+                            action.accept(n.value);
+                        }
+                        n = n.next;
+                    }
+                } while (n != null || i < hi);
+                if (mc != cacheMap.modCount) {
+                    throw new ConcurrentModificationException();
+                }
+            }
+        }
+
+        @Override
+        public boolean tryAdvance(Consumer<? super V> action) {
+            Assert.notNull(action, "action can not null");
+            CacheNode<K, V>[] tab = map.table;
+            int hi;
+            if (tab != null && tab.length >= (hi = getFence()) && index >= 0) {
+                long now = System.currentTimeMillis();
+                while (current != null || index < hi) {
+                    if (current == null) {
+                        current = tab[index++];
+                    } else {
+                        if (!current.isExpire(now)) {
+                            V v = current.value;
+                            action.accept(v);
+                            if (map.modCount != expectedModCount) {
+                                throw new ConcurrentModificationException();
+                            }
+                            return true;
+                        }
+                        current = current.next;
+                    }
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public Spliterator<V> trySplit() {
+            int hi = getFence(), lo = index, mid = (lo + hi) >>> 1;
+            return (lo >= mid || current != null) ? null :
+                    new ValueSpliterator<>(map, lo, index = mid, est >>>= 1,
+                            expectedModCount);
+        }
+
+        @Override
+        public int characteristics() {
+            return fence < 0 || est == map.size ? Spliterator.SIZED : 0;
         }
     }
 
 
+    static class EntrySpliterator<K, V> extends LazyCacheMapSpliterators<K, V>
+            implements Spliterator<Entry<K, V>> {
+
+        EntrySpliterator(LazyCacheMap<K, V> map, int index,
+                         int fence, int est, int expectedModCount) {
+            super(map, index, fence, est, expectedModCount);
+        }
+
+        @Override
+        public void forEachRemaining(Consumer<? super Entry<K, V>> action) {
+            Assert.notNull(action, "action can not null");
+            LazyCacheMap<K, V> cacheMap = map;
+            CacheNode<K, V>[] tab = cacheMap.table;
+            int hi, mc, i;
+            if ((hi = fence) < 0) {
+                hi = tab == null ? 0 : tab.length;
+                mc = expectedModCount = cacheMap.modCount;
+            } else {
+                mc = expectedModCount;
+            }
+            if (tab != null && tab.length >= hi && (i = index) >= 0
+                    && (i < (index = hi) || current != null)) {
+                CacheNode<K, V> n = current;
+                current = null;
+                long now = System.currentTimeMillis();
+                do {
+                    if (n == null) {
+                        n = tab[i++];
+                    } else {
+                        //略过过期key
+                        if (!n.isExpire(now)) {
+                            action.accept(n);
+                        }
+                        n = n.next;
+                    }
+                } while (n != null || i < hi);
+                if (mc != cacheMap.modCount) {
+                    throw new ConcurrentModificationException();
+                }
+            }
+        }
+
+        @Override
+        public boolean tryAdvance(Consumer<? super Entry<K, V>> action) {
+            Assert.notNull(action, "action can not null");
+            CacheNode<K, V>[] tab = map.table;
+            int hi;
+            if (tab != null && tab.length >= (hi = getFence()) && index >= 0) {
+                long now = System.currentTimeMillis();
+                while (current != null || index < hi) {
+                    if (current == null) {
+                        current = tab[index++];
+                    } else {
+                        if (!current.isExpire(now)) {
+                            CacheNode<K, V> e = current;
+                            action.accept(e);
+                            if (map.modCount != expectedModCount) {
+                                throw new ConcurrentModificationException();
+                            }
+                            return true;
+                        }
+                        current = current.next;
+                    }
+                }
+            }
+            return false;
+        }
+
+        @Override
+        public Spliterator<Entry<K, V>> trySplit() {
+            int hi = getFence(), lo = index, mid = (lo + hi) >>> 1;
+            return (lo >= mid || current != null) ? null :
+                    new EntrySpliterator<>(map, lo, index = mid, est >>>= 1,
+                            expectedModCount);
+        }
+
+        @Override
+        public int characteristics() {
+            return (fence < 0 || est == map.size ? Spliterator.SIZED : 0) |
+                    Spliterator.DISTINCT;
+        }
+    }
 }
 
