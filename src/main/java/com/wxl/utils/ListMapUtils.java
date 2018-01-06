@@ -2,9 +2,7 @@ package com.wxl.utils;
 
 import org.springframework.util.Assert;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by wuxingle on 2017/12/17 0017.
@@ -46,7 +44,31 @@ public class ListMapUtils {
     }
 
 
+    /**
+     * 把map的value转为string
+     */
+    public static <K, V> Map<K, String> toStringMap(Map<K, V> map) {
+        Map<K, String> result = new HashMap<>(map.size());
+        for (Map.Entry<K, V> entry : map.entrySet()) {
+            K key = entry.getKey();
+            V value = entry.getValue();
+            result.put(key, value == null ? null : value.toString());
+        }
+        return result;
+    }
 
+
+    /**
+     * 根据value拿key，拿第一个
+     */
+    public static <K, V> K getKeyByValue(Map<K, V> map, V value) {
+        for(Map.Entry<K,V> entry:map.entrySet()){
+            if(Objects.equals(entry.getValue(),value)){
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
 
 }
 

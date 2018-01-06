@@ -401,7 +401,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
 
     @Override
     public void putAll(Map<? extends K, ? extends V> m) {
-        Assert.notNull(m,"putAll map can not null");
+        Assert.notNull(m, "putAll map can not null");
         putMapEntries(m);
     }
 
@@ -572,7 +572,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         }
 
         public Spliterator<K> spliterator() {
-            return new KeySpliterator<>(LazyCacheMap.this,0,-1,0,0);
+            return new KeySpliterator<>(LazyCacheMap.this, 0, -1, 0, 0);
         }
 
         public void forEach(Consumer<? super K> action) {
@@ -635,7 +635,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         }
 
         public Spliterator<V> spliterator() {
-            return new ValueSpliterator<>(LazyCacheMap.this,0,-1,0,0);
+            return new ValueSpliterator<>(LazyCacheMap.this, 0, -1, 0, 0);
         }
 
         public void forEach(Consumer<? super V> action) {
@@ -715,7 +715,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         }
 
         public Spliterator<Entry<K, V>> spliterator() {
-            return new EntrySpliterator<>(LazyCacheMap.this,0,-1,0,0);
+            return new EntrySpliterator<>(LazyCacheMap.this, 0, -1, 0, 0);
         }
 
         public void forEach(Consumer<? super Entry<K, V>> action) {
