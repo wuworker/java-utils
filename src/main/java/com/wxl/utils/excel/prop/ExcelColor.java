@@ -4,7 +4,7 @@ package com.wxl.utils.excel.prop;
  * Created by wuxingle on 2017/10/21 0021.
  * 颜色
  */
-public class   ExcelColor {
+public class ExcelColor {
 
     public static final short BLACK = 0;
     public static final short WHITE = 1;

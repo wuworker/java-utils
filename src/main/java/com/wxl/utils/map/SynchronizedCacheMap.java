@@ -15,7 +15,7 @@ import java.util.function.Function;
  * Created by wuxingle on 2017/12/3 0003.
  * 同步的缓存map.
  * 默认使用LazyCacheMap.
- * 因为用的锁不是对象本身,所以迭代等复合操作时,
+ * 因为用的锁不是对象本身,所以在需要锁时
  * 需要用getLock()方法获取锁.
  */
 @ThreadSafe
@@ -29,17 +29,17 @@ public class SynchronizedCacheMap<K, V> extends AbstractMap<K, V>
     private final Map<K, V> lockProxyMap;
 
     public SynchronizedCacheMap() {
-        cacheMap = new LazyCacheMap2<>();
+        cacheMap = new LazyCacheMap<>();
         lockProxyMap = Collections.synchronizedMap(cacheMap);
     }
 
     public SynchronizedCacheMap(int initialCapacity) {
-        cacheMap = new LazyCacheMap2<>(initialCapacity);
+        cacheMap = new LazyCacheMap<>(initialCapacity);
         lockProxyMap = Collections.synchronizedMap(cacheMap);
     }
 
     public SynchronizedCacheMap(int initialCapacity, float loadFactor) {
-        cacheMap = new LazyCacheMap2<>(initialCapacity, loadFactor);
+        cacheMap = new LazyCacheMap<>(initialCapacity, loadFactor);
         lockProxyMap = Collections.synchronizedMap(cacheMap);
     }
 

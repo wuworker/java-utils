@@ -45,9 +45,7 @@ public class ExcelImportUtils {
     }
 
     public static List<List<String>> imports(InputStream in, int sheetIndex, int rowStart) throws IOException {
-        return imports(in, sheetIndex, rowStart, (map) -> {
-            return new ArrayList<>(map.values());
-        });
+        return imports(in, sheetIndex, rowStart, (map) -> new ArrayList<>(map.values()));
     }
 
     public static List<List<String>> importFromTmp(Workbook workbook, int sheetIndex) {
@@ -55,9 +53,7 @@ public class ExcelImportUtils {
     }
 
     public static List<List<String>> importFromTmp(Workbook workbook, int sheetIndex, int rowStart) {
-        return importFromTmp(workbook, sheetIndex, rowStart, (map) -> {
-            return new ArrayList<>(map.values());
-        });
+        return importFromTmp(workbook, sheetIndex, rowStart, (map) -> new ArrayList<>(map.values()));
     }
 
     /**
@@ -126,10 +122,16 @@ public class ExcelImportUtils {
         List<T> result = new ArrayList<>();
         Sheet sheet = workbook.getSheetAt(sheetIndex);
         Assert.notNull(sheet, "can not find sheet by sheetIndex:" + sheetIndex);
-        List<Map<Integer, String>> values = getValues(sheet);
-        for (int j = rowStart; j < values.size(); j++) {
-            result.add(rowHandler.doWithRow(values.get(j)));
+
+        Map<Integer, String> cells = new LinkedHashMap<>();
+        for (int i = rowStart, len = sheet.getLastRowNum() - sheet.getFirstRowNum(); i <= len; i++) {
+            for (Cell cell : sheet.getRow(i)) {
+                cells.put(cell.getColumnIndex(), getCellString(cell));
+            }
+            result.add(rowHandler.doWithRow(cells));
+            cells.clear();
         }
+
         return result;
     }
 
@@ -142,28 +144,12 @@ public class ExcelImportUtils {
         in.close();
     }
 
-
-    /**
-     * 获取表的所有字段
-     */
-    private static List<Map<Integer, String>> getValues(Sheet sheet) {
-        List<Map<Integer, String>> values = new ArrayList<>();
-        for (Row row : sheet) {
-            Map<Integer, String> cells = new LinkedHashMap<>();
-            for (Cell cell : row) {
-                cells.put(cell.getColumnIndex(), getCellString(cell));
-            }
-            values.add(cells);
-        }
-        return values;
-    }
-
     /**
      * 设置属性
      */
     private static void setFieldValue(Object obj, Field field, String cellValue) {
         Class<?> clazz = field.getType();
-        Object value = null;
+        Object value;
         if (cellValue == null) {
             value = clazz == String.class ? "" : null;
         } else if (clazz == String.class) {

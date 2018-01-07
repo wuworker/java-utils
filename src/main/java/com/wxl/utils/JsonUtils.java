@@ -15,17 +15,21 @@ public class JsonUtils {
     /**
      * 格式化输出,必须为json对象
      */
-    public static String toPrettyFormat(Map<String, Object> json) {
-        return JSON.toJSONString(json, true);
-    }
-
-    public static String toPrettyFormat(List<Object> json) {
+    public static String toPrettyFormat(Object json) {
         return JSON.toJSONString(json, true);
     }
 
     /**
      * 往json格式的数据放入值
      */
+    public static Object put(Object json, String key, Object value) {
+        return putVal(json, key, value, null, false);
+    }
+
+    public static Object put(Object json, String key, Object value, String split) {
+        return putVal(json, key, value, split, false);
+    }
+
     @SuppressWarnings("unchecked")
     public static Map<String, Object> put(Map<String, Object> json, String key, Object value) {
         return (Map<String, Object>) putVal(json, key, value, null, false);
@@ -46,10 +50,17 @@ public class JsonUtils {
         return (List<Object>) putVal(json, key, value, split, false);
     }
 
-
     /**
      * 只有原来没有值时才放入
      */
+    public static Object putIfAbsent(Object json, String key, Object value) {
+        return putVal(json, key, value, null, true);
+    }
+
+    public static Object putIfAbsent(Object json, String key, Object value, String split) {
+        return putVal(json, key, value, split, true);
+    }
+
     @SuppressWarnings("unchecked")
     public static Map<String, Object> putIfAbsent(Map<String, Object> json, String key, Object value) {
         return (Map<String, Object>) putVal(json, key, value, null, true);
@@ -90,37 +101,9 @@ public class JsonUtils {
         }
         String[] keys = key.split(split);
         Object findJson = json;
-        for (int i = 0; i < keys.length; i++) {
-            //如果是最后一个
-            if (i + 1 >= keys.length) {
-                if (findJson instanceof Map) {
-                    Map<String, Object> findMap = (Map<String, Object>) findJson;
-                    Object v = findMap.get(keys[i]);
-                    if (v == null || !onlyIfAbsent) {
-                        findMap.put(keys[i], value);
-                    }
-                } else if (findJson instanceof List) {
-                    List<Object> findList = (List<Object>) findJson;
-                    //如果最后一个是list类型,那么key一定是数字索引
-                    int index = Integer.parseInt(keys[i]);
-                    if (index >= findList.size()) {
-                        for (int j = findList.size(); j < index; j++) {
-                            findList.add(null);
-                        }
-                        findList.add(value);
-                    } else {
-                        findList.add(index, value);
-                    }
-                } else {
-                    if (i == 0) {
-                        throw new IllegalArgumentException("input object is not a json,must is List or Map, actual is :" + json);
-                    }
-                    throw new IllegalArgumentException("can not put '" + key + "', "
-                            + "because get '" + keys[i - 1] + "' value is '" + findJson + "'");
-                }
-                break;
-            }
-
+        int i = 0;
+        //循环找到最后一层key的值
+        for (int len = keys.length - 1; i < len; i++) {
             Object v;
             String currentKey = keys[i];
             String nextKey = keys[i + 1];
@@ -159,7 +142,7 @@ public class JsonUtils {
                     if (toLarge) {
                         list.add(subList);
                     } else {
-                        list.add(index, subList);
+                        list.set(index, subList);
                     }
                     findJson = subList;
                 } else {
@@ -167,7 +150,7 @@ public class JsonUtils {
                     if (toLarge) {
                         list.add(map);
                     } else {
-                        list.add(index, map);
+                        list.set(index, map);
                     }
                     findJson = map;
                 }
@@ -179,69 +162,65 @@ public class JsonUtils {
                         + "because get '" + keys[i - 1] + "' value is '" + findJson + "'");
             }
         }
+        if (findJson instanceof Map) {
+            Map<String, Object> findMap = (Map<String, Object>) findJson;
+            Object v = findMap.get(keys[i]);
+            if (v == null || !onlyIfAbsent) {
+                findMap.put(keys[i], value);
+            }
+        } else if (findJson instanceof List) {
+            List<Object> findList = (List<Object>) findJson;
+            //如果最后一个是list类型,那么key必须是数字索引
+            int index = Integer.parseInt(keys[i]);
+            if (index >= findList.size()) {
+                for (int j = findList.size(); j < index; j++) {
+                    findList.add(null);
+                }
+                findList.add(value);
+            } else {
+                Object old = findList.get(index);
+                if (old == null || !onlyIfAbsent) {
+                    findList.set(index, value);
+                }
+            }
+        } else {
+            if (i == 0) {
+                throw new IllegalArgumentException("input object is not a json,must is List or Map, actual is :" + json);
+            }
+            throw new IllegalArgumentException("can not put '" + key + "', "
+                    + "because get '" + keys[i - 1] + "' value is '" + findJson + "'");
+        }
         return json;
     }
 
 
     /**
-     * 从json格式中取出数据
-     * map
+     * 从json中取出数据
      */
-    public static <T> T get(Map<String, Object> map, String key, Class<T> clazz) {
-        return getVal(map, key, clazz, null);
+    public static <T> T get(Object json, String key, Class<T> clazz) {
+        return getVal(json, key, clazz, null);
     }
 
-    public static <T> T get(Map<String, Object> map, String key, Class<T> clazz, String split) {
-        return getVal(map, key, clazz, split);
+    public static <T> T get(Object json, String key, Class<T> clazz, String split) {
+        return getVal(json, key, clazz, split);
     }
 
-    public static Object get(Map<String, Object> map, String key) {
-        return getVal(map, key, Object.class, null);
+    public static Object get(Object json, String key) {
+        return getVal(json, key, Object.class, null);
     }
 
-    public static Object get(Map<String, Object> map, String key, String split) {
-        return getVal(map, key, Object.class, split);
+    public static Object get(Object json, String key, String split) {
+        return getVal(json, key, Object.class, split);
     }
 
-    public static String getString(Map<String, Object> map, String key) {
-        return getString(map, key, null);
+    public static String getString(Object json, String key) {
+        return getString(json, key, null);
     }
 
-    public static String getString(Map<String, Object> map, String key, String split) {
-        Object obj = getVal(map, key, Object.class, split);
+    public static String getString(Object json, String key, String split) {
+        Object obj = getVal(json, key, Object.class, split);
         return obj == null ? null : obj.toString();
     }
-
-
-    /**
-     * 从json格式中取出数据
-     * list
-     */
-    public static <T> T get(List<Object> list, String key, Class<T> clazz) {
-        return getVal(list, key, clazz, null);
-    }
-
-    public static <T> T get(List<Object> list, String key, Class<T> clazz, String split) {
-        return getVal(list, key, clazz, split);
-    }
-
-    public static Object get(List<Object> list, String key) {
-        return getVal(list, key, Object.class, null);
-    }
-
-    public static Object get(List<Object> list, String key, String split) {
-        return getVal(list, key, Object.class, split);
-    }
-
-    public static String getString(List<Object> list, String key) {
-        return getString(list, key, null);
-    }
-
-    public static String getString(List<Object> list, String key, String split) {
-        Object obj = getVal(list, key, Object.class, split);
-        return obj == null ? null : obj.toString();
-    }
-
 
     @SuppressWarnings("unchecked")
     private static <T> T getVal(Object json, String key, Class<T> clazz, String split) {
@@ -253,25 +232,27 @@ public class JsonUtils {
         }
         String[] keys = key.split(split);
         Object findJson = json;
+        Object val = null;
         for (int i = 0; i < keys.length; i++) {
-            Object v;
             if (findJson instanceof Map) {
                 Map<String, Object> map = (Map<String, Object>) findJson;
-                v = map.get(keys[i]);
+                val = map.get(keys[i]);
             } else if (findJson instanceof List) {
                 List<Object> list = (List<Object>) findJson;
-                v = list.get(Integer.parseInt(keys[i]));
+                val = list.get(Integer.parseInt(keys[i]));
             } else {
+                if (i == 0) {
+                    throw new IllegalArgumentException("input object is not a json,must is List or Map, actual is :" + json);
+                }
                 throw new IllegalArgumentException("can not get '" + key + "', because get '"
-                        + keys[i] + "' value is not map or list, value=" + findJson);
+                        + keys[i - 1] + "' value is not map or list, value=" + findJson);
             }
-            if (v == null || i + 1 >= keys.length) {
-                return (T) v;
+            if (val == null) {
+                break;
             }
-
-            findJson = v;
+            findJson = val;
         }
-        return null;
+        return (T) val;
     }
 
 

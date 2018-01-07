@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Created by wuxingle on 2017/12/17 0017.
+ * 定时器测试
  */
 public class TimerTest {
 

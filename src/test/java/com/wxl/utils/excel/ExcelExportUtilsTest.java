@@ -1,10 +1,10 @@
 package com.wxl.utils.excel;
 
+import com.wxl.utils.TestHelper;
 import com.wxl.utils.excel.prop.ExcelVersion;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.junit.Test;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.*;
@@ -14,6 +14,10 @@ import java.util.*;
  *
  */
 public class ExcelExportUtilsTest {
+
+    private static OutputStream getFileOS(String filename){
+        return TestHelper.getFileOutputStream(ExcelExportUtilsTest.class,filename);
+    }
 
     @Test
     public void export() throws Exception {
@@ -32,7 +36,7 @@ public class ExcelExportUtilsTest {
             strings.add(random.nextInt());
         }
 
-        OutputStream out = new FileOutputStream("src/test/resources/map.xlsx");
+        OutputStream out = getFileOS("expore.xlsx");
         Workbook workbook = ExcelExportUtils.createTmp(ExcelVersion.XLSX);
         ExcelExportUtils.exportToTmp(workbook,list,"用户",new String[]{"id","姓名","年龄","手机","地址"});
         ExcelExportUtils.exportToTmp(workbook,maps,"map",new String[]{"姓名","年龄","手机","地址"});
@@ -54,7 +58,7 @@ public class ExcelExportUtilsTest {
             map.put("参与用户ip","用户"+random.nextInt());
             list.add(map);
         }
-        OutputStream out = new FileOutputStream("src/test/resources/map2.xlsx");
+        OutputStream out = getFileOS("export2.xlsx");
 
         ExcelExportUtils.export(list,out,ExcelVersion.XLSX);
     }

@@ -22,8 +22,8 @@ import java.util.function.Function;
  * 因为Iterator可能拿到过期的数据
  */
 @UnThreadSafe
-public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
-        implements Serializable, Cloneable {
+public class LazyCacheMap<K, V> extends AbstractMap<K, V>
+        implements CacheMap<K, V>, Serializable, Cloneable {
 
     private static final long serialVersionUID = -4240336930322646823L;
 
@@ -56,7 +56,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
     }
 
     public LazyCacheMap(int initialCapacity) {
-        this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR);
+        this(initialCapacity, DEFAULT_LOAD_FACTOR);
     }
 
     public LazyCacheMap(int initialCapacity, float loadFactor) {
@@ -93,7 +93,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         if (node == null) {
             return false;
         }
-        node.setExpire(expire);
+        node.expire = expire + currentTimeMillis();
         return true;
     }
 
@@ -106,7 +106,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         if (node == null) {
             return false;
         }
-        node.setExpire(null);
+        node.expire = null;
         return true;
     }
 
@@ -123,11 +123,11 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         if (node == null) {
             return NOT_EXIST_KEY;
         }
-        Long expire = node.getExpire();
+        Long expire = node.expire;
         if (expire == null) {
             return PERSISTENT_KEY;
         }
-        return expire - System.currentTimeMillis();
+        return expire - currentTimeMillis();
     }
 
     /**
@@ -136,7 +136,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
     @Override
     public boolean isPersistent(K key) {
         CacheNode<K, V> node = getNode(hash(key), key);
-        return node != null && node.getExpire() == null;
+        return node != null && node.expire == null;
     }
 
     /**
@@ -148,10 +148,12 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             CacheNode<K, V> node = removeNode(hash(key), key, null, false);
             return node == null ? null : node.value;
         }
-        return putVal(hash(key), key, value, expire, false);
+        return putVal(hash(key), key, value, expire + currentTimeMillis(), false);
     }
 
-
+    /**
+     * @param expire 过期时间戳(将来的时间)
+     */
     private V putVal(int hash, K key, V value, Long expire, boolean onlyIfAbsent) {
         CacheNode<K, V>[] tab = table;
         int len;
@@ -180,10 +182,16 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             }
             //key已存在
             if (existNode != null) {
+                //过期
+                if (existNode.isExpire()) {
+                    existNode.value = value;
+                    existNode.expire = expire;
+                    return null;
+                }
                 V old = existNode.value;
                 if (old == null || !onlyIfAbsent) {
                     existNode.value = value;
-                    existNode.setExpire(expire);
+                    existNode.expire = expire;
                 }
                 return old;
             }
@@ -233,7 +241,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         CacheNode<K, V>[] newTab = (CacheNode<K, V>[]) (new CacheNode[newCap]);
         table = newTab;
         if (oldTab != null) {
-            long now = System.currentTimeMillis();
+            long now = currentTimeMillis();
             for (int i = 0; i < oldCap; i++) {
                 CacheNode<K, V> node;
                 if ((node = oldTab[i]) == null) {
@@ -298,7 +306,14 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             CacheNode<K, V> node = removeNode(hash(key), key, value, true);
             return node == null ? null : node.value;
         }
-        return putVal(hash(key), key, value, expire, true);
+        return putVal(hash(key), key, value, expire + currentTimeMillis(), true);
+    }
+
+    /**
+     * 获取当前时间戳
+     */
+    private static long currentTimeMillis() {
+        return System.currentTimeMillis();
     }
 
     //-------------------------map实现-------------------------------------------
@@ -321,7 +336,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         if ((tab = table) == null || size <= 0) {
             return;
         }
-        long now = System.currentTimeMillis();
+        long now = currentTimeMillis();
         for (int i = 0; i < tab.length; i++) {
             for (CacheNode<K, V> p = null, n = tab[i]; n != null; n = n.next) {
                 //删除过期key
@@ -420,11 +435,11 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             }
             if (m instanceof LazyCacheMap) {
                 for (Entry<? extends K, ? extends V> entry : m.entrySet()) {
-                    CacheEntry<? extends K, ? extends V> cacheEntry =
-                            (CacheEntry<? extends K, ? extends V>) entry;
-                    K key = cacheEntry.getKey();
-                    V value = cacheEntry.getValue();
-                    Long expire = cacheEntry.getExpire();
+                    CacheNode<? extends K, ? extends V> cacheNode =
+                            (CacheNode<? extends K, ? extends V>) entry;
+                    K key = cacheNode.key;
+                    V value = cacheNode.value;
+                    Long expire = cacheNode.expire;
                     putVal(hash(key), key, value, expire, false);
                 }
             } else {
@@ -516,7 +531,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         if ((tab = table) == null || size <= 0) {
             return false;
         }
-        long now = System.currentTimeMillis();
+        long now = currentTimeMillis();
         for (int i = 0; i < tab.length; i++) {
             for (CacheNode<K, V> p = null, n = tab[i]; n != null; n = n.next) {
                 //过期删除
@@ -580,7 +595,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             if ((tab = table) == null || size <= 0) {
                 return;
             }
-            long now = System.currentTimeMillis();
+            long now = currentTimeMillis();
             int mod = modCount;
             for (int i = 0; i < tab.length; i++) {
                 for (CacheNode<K, V> p = null, n = tab[i]; n != null; n = n.next) {
@@ -643,7 +658,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             if ((tab = table) == null || size <= 0) {
                 return;
             }
-            long now = System.currentTimeMillis();
+            long now = currentTimeMillis();
             int mod = modCount;
             for (int i = 0; i < tab.length; i++) {
                 for (CacheNode<K, V> p = null, n = tab[i]; n != null; n = n.next) {
@@ -723,7 +738,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             if ((tab = table) == null || size <= 0) {
                 return;
             }
-            long now = System.currentTimeMillis();
+            long now = currentTimeMillis();
             int mod = modCount;
             for (int i = 0; i < tab.length; i++) {
                 for (CacheNode<K, V> p = null, n = tab[i]; n != null; n = n.next) {
@@ -832,7 +847,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         if ((tab = table) == null || (len = tab.length) == 0 || size > threshold) {
             len = (tab = resize()).length;
         }
-        long now = System.currentTimeMillis();
+        long now = currentTimeMillis();
         //找到oldNode
         if ((first = tab[index = hash & (len - 1)]) != null) {
             CacheNode<K, V> n = first;
@@ -1072,7 +1087,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         if ((tab = table) == null || size <= 0) {
             return;
         }
-        long now = System.currentTimeMillis();
+        long now = currentTimeMillis();
         int mod = modCount;
         for (int i = 0; i < tab.length; i++) {
             for (CacheNode<K, V> p = null, n = tab[i]; n != null; n = n.next) {
@@ -1105,7 +1120,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         if ((tab = table) == null || size <= 0) {
             return;
         }
-        long now = System.currentTimeMillis();
+        long now = currentTimeMillis();
         int mod = modCount;
         for (int i = 0; i < tab.length; i++) {
             for (CacheNode<K, V> p = null, n = tab[i]; n != null; n = n.next) {
@@ -1144,7 +1159,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             return "{}";
         }
         StringBuilder sb = new StringBuilder("{");
-        long now = System.currentTimeMillis();
+        long now = currentTimeMillis();
         int mod = modCount;
         for (int i = 0; i < tab.length; i++) {
             for (CacheNode<K, V> p = null, n = tab[i]; n != null; n = n.next) {
@@ -1159,9 +1174,9 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
                     mod++;
                     size--;
                 } else {
-                    K key = n.getKey();
-                    V value = n.getValue();
-                    Long expire = n.getExpire();
+                    K key = n.key;
+                    V value = n.value;
+                    Long expire = n.expire;
                     sb.append(key == this ? "(this Map)" : key)
                             .append("=")
                             .append(value == this ? "(this Map)" : value)
@@ -1181,8 +1196,8 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
                 : sb.substring(0, sb.length() - 1) + "}";
     }
 
-
     @Override
+    @SuppressWarnings("unchecked")
     public LazyCacheMap clone() {
         LazyCacheMap<K, V> map;
         try {
@@ -1244,12 +1259,11 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             float ft = (float) cap * lf;
             threshold = ((cap < MAXIMUM_CAPACITY && ft < MAXIMUM_CAPACITY) ?
                     (int) ft : Integer.MAX_VALUE);
-            CacheNode<K, V>[] tab = (CacheNode<K, V>[]) new CacheNode[cap];
-            table = tab;
+            table = (CacheNode<K, V>[]) new CacheNode[cap];
             for (int i = 0; i < size; i++) {
                 K key = (K) s.readObject();
                 V value = (V) s.readObject();
-                Long expire = s.readLong();
+                Long expire = (Long) s.readObject();
                 putVal(hash(key), key, value, expire, false);
             }
         }
@@ -1265,7 +1279,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             for (CacheNode<K, V> n = tab[i]; n != null; n = n.next) {
                 s.writeObject(n.key);
                 s.writeObject(n.value);
-                s.writeLong(n.expire);
+                s.writeObject(n.expire);
             }
         }
     }
@@ -1281,6 +1295,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
         final int hash;
         final K key;
         V value;
+        //过期时间
         Long expire;
         CacheNode<K, V> next;
 
@@ -1288,56 +1303,45 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             this.hash = hash;
             this.key = key;
             this.value = value;
+            this.expire = expire;
             this.next = next;
-            setExpire(expire);
-        }
-
-        @Override
-        public Long getExpire() {
-            return expire;
-        }
-
-        @Override
-        public void setExpire(Long expire) {
-            if (expire == null) {
-                this.expire = null;
-            } else {
-                this.expire = expire + System.currentTimeMillis();
-            }
         }
 
         @Override
         public boolean isExpire() {
-            return isExpire(System.currentTimeMillis());
+            return isExpire(currentTimeMillis());
         }
 
         boolean isExpire(long now) {
             return expire != null && expire - now <= 0;
         }
 
-        @Override
+        public Long getExpire() {
+            return expire;
+        }
+
+        public void setExpire(Long expire) {
+            this.expire = expire;
+        }
+
         public K getKey() {
             return key;
         }
 
-        @Override
         public V getValue() {
             return value;
         }
 
-        @Override
         public V setValue(V value) {
             V old = this.value;
             this.value = value;
             return old;
         }
 
-        @Override
         public int hashCode() {
             return Objects.hashCode(key) ^ Objects.hashCode(value);
         }
 
-        @Override
         public boolean equals(Object obj) {
             if (this == obj) {
                 return true;
@@ -1348,6 +1352,16 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
                         && Objects.equals(value, entry.getValue());
             }
             return false;
+        }
+
+        public String toString() {
+            return "CacheNode{" +
+                    "hash=" + hash +
+                    ", key=" + key +
+                    ", value=" + value +
+                    ", expire=" + (expire == null ? null : expire - currentTimeMillis()) +
+                    ", next=" + next +
+                    '}';
         }
     }
 
@@ -1390,7 +1404,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             if (n == null) {
                 return false;
             }
-            long now = System.currentTimeMillis();
+            long now = currentTimeMillis();
             //如果已过期,则删除并继续下一个
             while (n.isExpire(now)) {
                 if (modCount != expectedModCount) {
@@ -1553,7 +1567,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
                     && (i < (index = hi) || current != null)) {
                 CacheNode<K, V> n = current;
                 current = null;
-                long now = System.currentTimeMillis();
+                long now = currentTimeMillis();
                 do {
                     if (n == null) {
                         n = tab[i++];
@@ -1577,7 +1591,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             CacheNode<K, V>[] tab = map.table;
             int hi;
             if (tab != null && tab.length >= (hi = getFence()) && index >= 0) {
-                long now = System.currentTimeMillis();
+                long now = currentTimeMillis();
                 while (current != null || index < hi) {
                     if (current == null) {
                         current = tab[index++];
@@ -1636,7 +1650,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
                     && (i < (index = hi) || current != null)) {
                 CacheNode<K, V> n = current;
                 current = null;
-                long now = System.currentTimeMillis();
+                long now = currentTimeMillis();
                 do {
                     if (n == null) {
                         n = tab[i++];
@@ -1660,7 +1674,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             CacheNode<K, V>[] tab = map.table;
             int hi;
             if (tab != null && tab.length >= (hi = getFence()) && index >= 0) {
-                long now = System.currentTimeMillis();
+                long now = currentTimeMillis();
                 while (current != null || index < hi) {
                     if (current == null) {
                         current = tab[index++];
@@ -1719,7 +1733,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
                     && (i < (index = hi) || current != null)) {
                 CacheNode<K, V> n = current;
                 current = null;
-                long now = System.currentTimeMillis();
+                long now = currentTimeMillis();
                 do {
                     if (n == null) {
                         n = tab[i++];
@@ -1743,7 +1757,7 @@ public class LazyCacheMap<K, V> extends AbstractCacheMap<K, V>
             CacheNode<K, V>[] tab = map.table;
             int hi;
             if (tab != null && tab.length >= (hi = getFence()) && index >= 0) {
-                long now = System.currentTimeMillis();
+                long now = currentTimeMillis();
                 while (current != null || index < hi) {
                     if (current == null) {
                         current = tab[index++];

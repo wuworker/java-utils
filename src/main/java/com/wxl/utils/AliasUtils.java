@@ -58,22 +58,23 @@ public class AliasUtils {
 
 
     /**
-     * 遍历json，转换别名
+     * 给json的key起别名
      */
-    public static Object convertOfJson(Object json,Function<String,String> alias){
+    @SuppressWarnings("unchecked")
+    public static Object aliasJsonKey(Object json, Function<String,String> alias){
         if(json instanceof Map){
-            Map map = (Map)json;
-            return convertOfJsonMap(map,alias);
+            Map<String,Object> map = (Map<String,Object>)json;
+            return aliasJsonKey(map,alias);
         }
         if(json instanceof List){
-            List list = (List)json;
-            return convertOfJsonList(list,alias);
+            List<Object> list = (List<Object>)json;
+            return aliasJsonKey(list,alias);
         }
         throw new IllegalArgumentException("input must is a json(Map or List),but actual is "+ json.getClass().getName());
     }
 
-
-    public static Map<String,Object> convertOfJsonMap(Map<String,Object> json, Function<String,String> alias){
+    @SuppressWarnings("unchecked")
+    public static Map<String,Object> aliasJsonKey(Map<String,Object> json, Function<String,String> alias){
         Map<String,Object> map = new HashMap<>(json.size());
         for(Map.Entry<String,Object> entry:json.entrySet()){
             String key = entry.getKey();
@@ -84,11 +85,11 @@ public class AliasUtils {
             }
             if(value instanceof Map){
                 Map<String,Object> valueMap = (Map<String,Object>)value;
-                value = convertOfJsonMap(valueMap,alias);
+                value = aliasJsonKey(valueMap,alias);
             }
             if(value instanceof List){
                 List<Object> valueList = (List<Object>)value;
-                value = convertOfJsonList(valueList,alias);
+                value = aliasJsonKey(valueList,alias);
             }
 
             map.put(name,value);
@@ -96,27 +97,18 @@ public class AliasUtils {
         return map;
     }
 
-
-    public static List<Object> convertOfJsonList(List<Object> json,Function<String,String> alias){
+    @SuppressWarnings("unchecked")
+    public static List<Object> aliasJsonKey(List<Object> json, Function<String,String> alias){
         List<Object> list = new ArrayList<>(json.size());
         for(Object obj:json){
             if(obj instanceof Map){
-                list.add(convertOfJsonMap((Map<String,Object>)obj,alias));
+                list.add(aliasJsonKey((Map<String,Object>)obj,alias));
             } else {
                 list.add(obj);
             }
         }
         return list;
     }
-
-
-
-
-
-
-
-
-
 
 }
 

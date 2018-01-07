@@ -2,6 +2,7 @@ package com.wxl.utils;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,12 @@ public class JsonUtilsTest {
         json = JsonUtils.put(json,"user.grade.2.a","aa");
         System.out.println(JsonUtils.toPrettyFormat(json));
 
+        json = JsonUtils.putIfAbsent(json,"user.grade.1","1111");
+        System.out.println(JsonUtils.toPrettyFormat(json));
+
+        json = JsonUtils.putIfAbsent(json,"user.grade.1","22222");
+        System.out.println(JsonUtils.toPrettyFormat(json));
+
         json = JsonUtils.put(json,"0","aa");
         System.out.println(JsonUtils.toPrettyFormat(json));
 
@@ -36,6 +43,19 @@ public class JsonUtilsTest {
 
         json = JsonUtils.put(json,"user","bb");
         System.out.println(JsonUtils.toPrettyFormat(json));
+
+        List<Object> list = new ArrayList<>();
+        list.add(1);
+        list.add("abc");
+
+        list = JsonUtils.put(list,"3.test",json);
+        System.out.println(JsonUtils.toPrettyFormat(list));
+
+        list = JsonUtils.putIfAbsent(list,"1","no");
+        System.out.println(JsonUtils.toPrettyFormat(list));
+
+        list = JsonUtils.put(list,"1","yes");
+        System.out.println(JsonUtils.toPrettyFormat(list));
     }
 
 
@@ -63,6 +83,9 @@ public class JsonUtilsTest {
 
         List list = JsonUtils.get(json,"user.grade",List.class);
         System.out.println(list);
+
+        List list2 = JsonUtils.get(json,"nice.age",List.class);
+        System.out.println(list2);
     }
 
 
