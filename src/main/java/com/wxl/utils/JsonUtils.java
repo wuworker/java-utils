@@ -4,7 +4,10 @@ import com.alibaba.fastjson.JSON;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Created by wuxingle on 2018/1/5.
@@ -17,6 +20,13 @@ public class JsonUtils {
      */
     public static String toPrettyFormat(Object json) {
         return JSON.toJSONString(json, true);
+    }
+
+    /**
+     * 把json字符串解析成对象
+     */
+    public static Object parse(String text){
+        return JSON.parse(text);
     }
 
     /**
@@ -253,6 +263,49 @@ public class JsonUtils {
             findJson = val;
         }
         return (T) val;
+    }
+
+
+
+    /**
+     * json转xml
+     * @see Dom4jUtils
+     */
+    public static String jsonToXmlString(String jsonStr) {
+        return Dom4jUtils.jsonToXmlString(jsonStr);
+    }
+
+    public static String jsonToXmlString(Object json) {
+       return Dom4jUtils.jsonToXmlString(json);
+    }
+
+    public static String jsonToXmlString(String jsonStr, String defaultRoot) {
+        return Dom4jUtils.jsonToXmlString(jsonStr,defaultRoot);
+    }
+
+    public static String jsonToXmlString(Object json, String defaultRoot) {
+        return Dom4jUtils.jsonToXmlString(json,defaultRoot);
+    }
+
+
+    /**
+     * xml转json
+     * @see Dom4jUtils
+     */
+    public static Map<String, Object> xmlToJson(String xml) {
+        return Dom4jUtils.xmlToJson(xml);
+    }
+
+    public static String xmlToJsonString(String xml) {
+        return Dom4jUtils.xmlToJsonString(xml);
+    }
+
+    public static Map<String, Object> xmlToJson(String xml, boolean containAttr) {
+        return Dom4jUtils.xmlToJson(xml,containAttr);
+    }
+
+    public static String xmlToJsonString(String xml, boolean containAttr) {
+        return Dom4jUtils.xmlToJsonString(xml,containAttr);
     }
 
 

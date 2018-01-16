@@ -1,7 +1,9 @@
 package com.wxl.utils.net.http;
 
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -311,22 +313,27 @@ public abstract class HttpUtils {
      * 把参数转为key=value,用&分隔的形式
      */
     public static String turnParamsString(Map<String, String> params, String reqCode) {
-        if (!ObjectUtils.isEmpty(params)) {
+        if (!CollectionUtils.isEmpty(params)) {
             return "";
         }
         StringBuilder reqParams = new StringBuilder();
         try {
-            for (String key : params.keySet()) {
+            for (Map.Entry<String,String> entry : params.entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
+                if(!StringUtils.hasText(key)){
+                    continue;
+                }
                 reqParams.append(URLEncoder.encode(key, reqCode))
                         .append("=")
-                        .append(URLEncoder.encode(params.get(key), reqCode))
+                        .append(StringUtils.isEmpty(value) ? value : URLEncoder.encode(params.get(key), reqCode))
                         .append("&");
             }
         } catch (UnsupportedEncodingException e) {
             throw new UnsupportedCharsetException(reqCode);
         }
 
-        return reqParams.substring(0, reqParams.length() - 1);
+        return reqParams.length() > 0 ? reqParams.substring(0, reqParams.length() - 1) : "";
     }
 
     /**

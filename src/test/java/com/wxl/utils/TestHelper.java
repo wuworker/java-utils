@@ -15,7 +15,7 @@ public class TestHelper {
         return TestHelper.class.getClassLoader().getResourceAsStream(path + "/" + fileName);
     }
 
-    public static OutputStream getFileOutputStream(Class<?> clazz, String fileName) {
+    public static FileOutputStream getFileOutputStream(Class<?> clazz, String fileName) {
         String name = clazz.getPackage().getName();
         String path = "src/test/resources/" + name.replaceAll("\\.", "/");
         File file;
