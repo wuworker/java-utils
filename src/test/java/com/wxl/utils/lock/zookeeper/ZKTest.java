@@ -1,18 +1,16 @@
-package com.wxl.utils.lock;
+package com.wxl.utils.lock.zookeeper;
 
 import org.apache.zookeeper.*;
-import org.apache.zookeeper.data.Stat;
 import org.junit.Test;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 
 /**
- * Created by wuxingle on 2018/1/15.
- * zookeeper test
+ * Created by wuxingle on 2018/1/26.
+ * zk test
  */
-public class ZookeeperTest {
-
+public class ZKTest {
 
     @Test
     public void test1() {
@@ -30,26 +28,22 @@ public class ZookeeperTest {
 
             String cPath = zooKeeper.create("/test", "haha".getBytes(),
                     ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                    CreateMode.EPHEMERAL);
-            System.out.println("create:" + cPath);
+                    CreateMode.PERSISTENT);
+            System.out.println("create1:" + cPath);
 
-            zooKeeper.create("/test/1", "haha".getBytes(),
+            Thread.currentThread().interrupt();
+
+            cPath = zooKeeper.create("/test2", "haha".getBytes(),
                     ZooDefs.Ids.OPEN_ACL_UNSAFE,
                     CreateMode.PERSISTENT);
-
-            Stat exists = zooKeeper.exists("/test", System.out::print);
-            System.out.println("exists:" + exists);
-
-            Stat stat = zooKeeper.setData("/test", "lala".getBytes(), -1);
-            System.out.println("setData:" + stat);
-
-            zooKeeper.delete("/test", -1);
+            System.out.println("create2:" + cPath);
 
         } catch (IOException | InterruptedException | KeeperException e) {
             e.printStackTrace();
         } finally {
             if (zooKeeper != null) {
                 try {
+                    Thread.sleep(10000);
                     zooKeeper.close();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -57,6 +51,5 @@ public class ZookeeperTest {
             }
         }
     }
-
 
 }

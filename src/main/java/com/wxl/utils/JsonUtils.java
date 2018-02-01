@@ -25,7 +25,7 @@ public class JsonUtils {
     /**
      * 把json字符串解析成对象
      */
-    public static Object parse(String text){
+    public static Object parse(String text) {
         return JSON.parse(text);
     }
 
@@ -266,46 +266,103 @@ public class JsonUtils {
     }
 
 
+    public static Object remove(Object json, String key) {
+        return remove(json, key, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static Object remove(Object json, String key, String split) {
+        Assert.notNull(json, "json map can not null");
+        Assert.hasText(key, "put key can not empty");
+        if (StringUtils.isEmpty(split)) {
+            split = "\\.";
+        }
+        String[] keys = key.split(split);
+        Object findJson = json;
+        for (int i = 0; i < keys.length - 1; i++) {
+            if (findJson instanceof Map) {
+                Map<String, Object> map = (Map<String, Object>) findJson;
+                findJson = map.get(keys[i]);
+            } else if (findJson instanceof List) {
+                List<Object> list = (List<Object>) findJson;
+                findJson = list.get(Integer.parseInt(keys[i]));
+            } else {
+                return null;
+            }
+        }
+        if(findJson instanceof Map){
+            Map<String, Object> map = (Map<String, Object>) findJson;
+            return map.remove(keys[keys.length - 1]);
+        }
+        if(findJson instanceof List){
+            List<Object> list = (List<Object>) findJson;
+            int index = Integer.parseInt(keys[keys.length - 1]);
+            if(index >= list.size()){
+                return null;
+            }
+            return list.remove(index);
+        }
+        return null;
+    }
+
 
     /**
      * json转xml
-     * @see Dom4jUtils
+     *
+     * @see JsonXmlConverter
      */
     public static String jsonToXmlString(String jsonStr) {
-        return Dom4jUtils.jsonToXmlString(jsonStr);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setCreateRootAuto(false);
+        return converter.jsonToXmlString(jsonStr);
     }
 
     public static String jsonToXmlString(Object json) {
-       return Dom4jUtils.jsonToXmlString(json);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setCreateRootAuto(false);
+        return converter.jsonToXmlString(json);
     }
 
     public static String jsonToXmlString(String jsonStr, String defaultRoot) {
-        return Dom4jUtils.jsonToXmlString(jsonStr,defaultRoot);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setCreateRootAuto(true);
+        converter.setDefaultRoot(defaultRoot);
+        return converter.jsonToXmlString(jsonStr);
     }
 
     public static String jsonToXmlString(Object json, String defaultRoot) {
-        return Dom4jUtils.jsonToXmlString(json,defaultRoot);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setCreateRootAuto(true);
+        converter.setDefaultRoot(defaultRoot);
+        return converter.jsonToXmlString(json);
     }
 
 
     /**
      * xml转json
-     * @see Dom4jUtils
+     *
+     * @see JsonXmlConverter
      */
     public static Map<String, Object> xmlToJson(String xml) {
-        return Dom4jUtils.xmlToJson(xml);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        return converter.xmlToJson(xml);
     }
 
     public static String xmlToJsonString(String xml) {
-        return Dom4jUtils.xmlToJsonString(xml);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        return converter.xmlToJsonString(xml);
     }
 
     public static Map<String, Object> xmlToJson(String xml, boolean containAttr) {
-        return Dom4jUtils.xmlToJson(xml,containAttr);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setContainAttr(containAttr);
+        return converter.xmlToJson(xml);
     }
 
     public static String xmlToJsonString(String xml, boolean containAttr) {
-        return Dom4jUtils.xmlToJsonString(xml,containAttr);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setContainAttr(containAttr);
+        return converter.xmlToJsonString(xml);
     }
 
 

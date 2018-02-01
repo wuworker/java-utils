@@ -7,7 +7,7 @@
         </encoder>
     </appender>
 
-    <logger name="com.wxl.utils" level="DEBUG" additivity="false">
+    <logger name="com.wxl.utils" level="INFO" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>
 

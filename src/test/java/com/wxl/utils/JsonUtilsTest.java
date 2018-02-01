@@ -89,6 +89,37 @@ public class JsonUtilsTest {
     }
 
 
+    @Test
+    public void testRemove(){
+        Map<String,Object> json = new HashMap<>();
+
+        json = JsonUtils.put(json,"user.info","nice");
+        json = JsonUtils.put(json,"user.grade.0",99);
+        json = JsonUtils.put(json,"user.grade.3",100);
+        json = JsonUtils.put(json,"user.grade.2.a","aa");
+        json = JsonUtils.put(json,"name","yes");
+        System.out.println(JsonUtils.toPrettyFormat(json));
+
+        JsonUtils.remove(json,"user.grade.1");
+        JsonUtils.remove(json,"name");
+        JsonUtils.remove(json,"user.info");
+        System.out.println(JsonUtils.toPrettyFormat(json));
+
+        JsonUtils.remove(json,"user.grade.1.a");
+        System.out.println(JsonUtils.toPrettyFormat(json));
+
+        //list
+        List<Object> list = new ArrayList<>();
+        list.add(1);
+        list.add("abc");
+        list = JsonUtils.put(list,"3.test",json);
+        System.out.println(JsonUtils.toPrettyFormat(list));
+
+        JsonUtils.remove(list,"0");
+        JsonUtils.remove(list,"1");
+        JsonUtils.remove(list,"1.test.user.grade.1");
+        System.out.println(JsonUtils.toPrettyFormat(list));
+    }
 
 
 

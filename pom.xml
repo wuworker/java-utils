@@ -51,6 +51,13 @@
                 </exclusion>
             </exclusions>
         </dependency>
+        <!-- zkclient -->
+        <dependency>
+            <groupId>com.github.sgroschupf</groupId>
+            <artifactId>zkclient</artifactId>
+            <version>0.1</version>
+            <optional>true</optional>
+        </dependency>
 
         <!-- dom4j -->
         <dependency>

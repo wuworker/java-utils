@@ -5,11 +5,13 @@ import org.dom4j.io.OutputFormat;
 import org.dom4j.io.XMLWriter;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 /**
  * Created by wuxingle on 2018/1/13.
@@ -229,226 +231,90 @@ public class Dom4jUtils {
 
     /**
      * xml转json
-     * 如果是属性，则在key前加个@区分
-     * 如果是
-     * <name age="12">haha</key>
-     * 则默认haha的key为value
-     * {
-     * "name":{
-     * "@age":"12"
-     * "value":"haha"
-     * }
-     * }
      */
     public static Map<String, Object> xmlToJson(String xml) {
-        return xmlToJson(xml, false, false);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        return converter.xmlToJson(xml);
+    }
+
+    public static Map<String, Object> xmlToJson(Element xml) {
+        JsonXmlConverter converter = new JsonXmlConverter();
+        return converter.xmlToJson(xml);
     }
 
     public static String xmlToJsonString(String xml) {
-        return JsonUtils.toPrettyFormat(xmlToJson(xml, false, false));
+        JsonXmlConverter converter = new JsonXmlConverter();
+        return converter.xmlToJsonString(xml);
+    }
+
+    public static String xmlToJsonString(Element xml) {
+        JsonXmlConverter converter = new JsonXmlConverter();
+        return converter.xmlToJsonString(xml);
     }
 
     public static Map<String, Object> xmlToJson(String xml, boolean containAttr) {
-        return xmlToJson(xml, containAttr, false);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setContainAttr(containAttr);
+        return converter.xmlToJson(xml);
+    }
+
+    public static Map<String, Object> xmlToJson(Element xml, boolean containAttr) {
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setContainAttr(containAttr);
+        return converter.xmlToJson(xml);
     }
 
     public static String xmlToJsonString(String xml, boolean containAttr) {
-        return JsonUtils.toPrettyFormat(xmlToJson(xml, containAttr, false));
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setContainAttr(containAttr);
+        return converter.xmlToJsonString(xml);
     }
 
-    public static Map<String, Object> xmlToJson(String xml, boolean containAttr, boolean containNs) {
-        Assert.hasText(xml, "input text must be xml text");
-        try {
-            Document document = DocumentHelper.parseText(xml);
-            Element rootElement = document.getRootElement();
-            return xmlToJson(rootElement, containAttr, containNs);
-        } catch (DocumentException e) {
-            throw new IllegalArgumentException(e);
-        }
+    public static String xmlToJsonString(Element xml, boolean containAttr) {
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setContainAttr(containAttr);
+        return converter.xmlToJsonString(xml);
     }
-
-    public static String xmlToJsonString(String xml, boolean containAttr, boolean containNs) {
-        return JsonUtils.toPrettyFormat(xmlToJson(xml, containAttr, containNs));
-    }
-
-    /**
-     * @param containAttr 是否包含属性
-     * @param containNs   是否包含前缀
-     */
-    @SuppressWarnings("unchecked")
-    public static Map<String, Object> xmlToJson(Element element, boolean containAttr, boolean containNs) {
-        Assert.notNull(element, "element can not null");
-        String name = containNs ? element.getQualifiedName() : element.getName();
-        List<Attribute> attributes = element.attributes();
-        List<Element> elements = element.elements();
-        Map<String, Object> json = new LinkedHashMap<>();
-        if (elements.isEmpty() && (!containAttr || attributes.isEmpty())) {
-            json.put(name, element.getTextTrim());
-        } else {
-            Map<String, Object> child = new LinkedHashMap<>();
-            if (containAttr) {
-                for (Attribute attr : attributes) {
-                    child.put("@" + (containNs ? attr.getQualifiedName() : attr.getName()), attr.getValue());
-                }
-                if (elements.isEmpty()) {
-                    child.put("value", element.getTextTrim());
-                }
-            }
-            for (Element ele : elements) {
-                //如果element有同名的组成list
-                Map<String, Object> map = xmlToJson(ele, containAttr, containNs);
-                for (Map.Entry<String, Object> entry : map.entrySet()) {
-                    String key = entry.getKey();
-                    Object value = entry.getValue();
-                    Object old = child.get(key);
-                    if (old == null) {
-                        child.put(key, value);
-                    } else {
-                        if (old instanceof List) {
-                            List<Object> list = (List<Object>) old;
-                            list.add(value);
-                        } else {
-                            List<Object> list = new ArrayList<>();
-                            list.add(old);
-                            list.add(value);
-                            child.put(key, list);
-                        }
-                    }
-                }
-            }
-            json.put(name, child);
-        }
-        return json;
-    }
-
 
     /**
      * json转xml
      */
     public static Element jsonToXml(String jsonStr, String defaultRoot) {
-        Object obj = JsonUtils.parse(jsonStr);
-        return jsonToXml(obj, defaultRoot);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setDefaultRoot(defaultRoot);
+        return converter.jsonToXml(jsonStr);
     }
 
     public static Element jsonToXml(Object json, String defaultRoot) {
-        return jsonToXml(json, null, defaultRoot);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setDefaultRoot(defaultRoot);
+        return converter.jsonToXml(json);
     }
 
     public static String jsonToXmlString(String jsonStr) {
-        Object obj = JsonUtils.parse(jsonStr);
-        return jsonToXmlString(obj);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setCreateRootAuto(false);
+        return converter.jsonToXmlString(jsonStr);
     }
 
-    @SuppressWarnings("unchecked")
     public static String jsonToXmlString(Object json) {
-        //生成默认的根节点
-        String uniqueRoot = RandomUtils.generateUUID(true);
-        Element root = jsonToXml(json, null, uniqueRoot);
-        //返回时去掉生成的根节点
-        if (root.getName().equals(uniqueRoot)) {
-            StringBuilder sb = new StringBuilder();
-            List<Element> elements = root.elements();
-            for (Element e : elements) {
-                sb.append(e.asXML());
-            }
-            return sb.toString();
-        }
-        return root.asXML();
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setCreateRootAuto(false);
+        return converter.jsonToXmlString(json);
     }
 
     public static String jsonToXmlString(String jsonStr, String defaultRoot) {
-        Object obj = JsonUtils.parse(jsonStr);
-        return jsonToXmlString(obj, defaultRoot);
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setCreateRootAuto(true);
+        converter.setDefaultRoot(defaultRoot);
+        return converter.jsonToXmlString(jsonStr);
     }
 
     public static String jsonToXmlString(Object json, String defaultRoot) {
-        Element root = jsonToXml(json, null, defaultRoot);
-        return root.asXML();
-    }
-
-
-    /**
-     * xml转json
-     *
-     * @param json        json对象
-     * @param root        根节点,json的key都设置在根节点下
-     * @param defaultRoot 当root为null时,使用的默认根节点名字
-     */
-    @SuppressWarnings("unchecked")
-    private static Element jsonToXml(Object json, Element root, String defaultRoot) {
-        Assert.hasText(defaultRoot, "default root name can not empty");
-        if (json instanceof Map) {
-            Map<String, Object> map = (Map<String, Object>) json;
-            if (root == null) {
-                if (map.size() == 1) {
-                    Map.Entry<String, Object> entry = map.entrySet().iterator().next();
-                    String key = entry.getKey();
-                    Object value = entry.getValue();
-                    if (value instanceof Map) {
-                        root = DocumentHelper.createElement(key);
-                        jsonMapToXml((Map<String, Object>) value, root);
-                    } else if (value instanceof List) {
-                        root = DocumentHelper.createElement(defaultRoot);
-                        jsonListToXml((List<Object>) value, root, key);
-                    } else {
-                        root = DocumentHelper.createElement(key);
-                        jsonToXml(value, root, defaultRoot);
-                    }
-                } else {
-                    root = DocumentHelper.createElement(defaultRoot);
-                    jsonMapToXml(map, root);
-                }
-            } else {
-                jsonMapToXml(map, root);
-            }
-        } else if (json instanceof List) {
-            if (root == null) {
-                root = DocumentHelper.createElement(defaultRoot);
-            }
-            jsonListToXml((List<Object>) json, root, null);
-        } else {
-            throw new IllegalArgumentException("input obj is not a json");
-        }
-        return root;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static void jsonMapToXml(Map<String, Object> json, Element root) {
-        for (Map.Entry<String, Object> entry : json.entrySet()) {
-            String key = entry.getKey();
-            Object value = entry.getValue();
-            if (value instanceof Map) {
-                Element element = DocumentHelper.createElement(key);
-                root.add(element);
-                jsonMapToXml((Map<String, Object>) value, element);
-            } else if (value instanceof List) {
-                jsonListToXml((List<Object>) value, root, key);
-            } else {
-                Element element = DocumentHelper.createElement(key);
-                element.setText(value == null ? "" : value.toString());
-                root.add(element);
-            }
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    private static void jsonListToXml(List<Object> json, Element root, String key) {
-        for (int i = 0; i < json.size(); i++) {
-            Object obj = json.get(i);
-            if (obj instanceof Map) {
-                Element element = DocumentHelper.createElement(StringUtils.isEmpty(key) ? String.valueOf(i) : key);
-                root.add(element);
-                jsonMapToXml((Map<String, Object>) obj, element);
-            } else if (obj instanceof List) {
-                Element element = DocumentHelper.createElement(StringUtils.isEmpty(key) ? String.valueOf(i) : key);
-                root.add(element);
-                jsonListToXml((List<Object>) obj, element, StringUtils.isEmpty(key) ? null : key);
-            } else {
-                Element element = DocumentHelper.createElement(StringUtils.isEmpty(key) ? String.valueOf(i) : key);
-                element.setText(obj == null ? "" : obj.toString());
-                root.add(element);
-            }
-        }
+        JsonXmlConverter converter = new JsonXmlConverter();
+        converter.setCreateRootAuto(true);
+        converter.setDefaultRoot(defaultRoot);
+        return converter.jsonToXmlString(json);
     }
 
 }

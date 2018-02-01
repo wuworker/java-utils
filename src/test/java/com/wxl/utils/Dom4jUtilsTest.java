@@ -175,19 +175,11 @@ public class Dom4jUtilsTest {
                 "</soap:Envelope>";
         System.out.println(Dom4jUtils.toPrettyFormat(xml1));
 
-        String json1 = Dom4jUtils.xmlToJsonString(xml1, false, false);
+        String json1 = Dom4jUtils.xmlToJsonString(xml1, false);
         System.out.println(json1);
         System.out.println("-------------------------------------------------------------");
 
-        json1 = Dom4jUtils.xmlToJsonString(xml1, true, false);
-        System.out.println(json1);
-        System.out.println("-------------------------------------------------------------");
-
-        json1 = Dom4jUtils.xmlToJsonString(xml1, true, true);
-        System.out.println(json1);
-        System.out.println("-------------------------------------------------------------");
-
-        json1 = Dom4jUtils.xmlToJsonString(xml1, false, true);
+        json1 = Dom4jUtils.xmlToJsonString(xml1, true);
         System.out.println(json1);
         System.out.println("-------------------------------------------------------------");
     }
@@ -204,11 +196,11 @@ public class Dom4jUtilsTest {
                 "</soap:Envelope>";
         System.out.println(Dom4jUtils.toPrettyFormat(xml1));
 
-        String json1 = Dom4jUtils.xmlToJsonString(xml1, false, false);
+        String json1 = Dom4jUtils.xmlToJsonString(xml1, false);
         System.out.println(json1);
         System.out.println("-------------------------------------------------------------");
 
-        json1 = Dom4jUtils.xmlToJsonString(xml1, true, false);
+        json1 = Dom4jUtils.xmlToJsonString(xml1, true);
         System.out.println(json1);
         System.out.println("-------------------------------------------------------------");
     }
@@ -228,11 +220,11 @@ public class Dom4jUtilsTest {
                 "</root>";
         System.out.println(Dom4jUtils.toPrettyFormat(xml1));
 
-        String json1 = Dom4jUtils.xmlToJsonString(xml1, false, false);
+        String json1 = Dom4jUtils.xmlToJsonString(xml1, false);
         System.out.println(json1);
         System.out.println("-------------------------------------------------------------");
 
-        json1 = Dom4jUtils.xmlToJsonString(xml1, true, false);
+        json1 = Dom4jUtils.xmlToJsonString(xml1, true);
         System.out.println(json1);
         System.out.println("-------------------------------------------------------------");
     }
