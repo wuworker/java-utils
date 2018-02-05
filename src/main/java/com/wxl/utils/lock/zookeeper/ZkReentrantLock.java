@@ -1,13 +1,18 @@
 package com.wxl.utils.lock.zookeeper;
 
 import com.wxl.utils.annotation.ThreadSafe;
+import com.wxl.utils.annotation.UnThreadSafe;
 import com.wxl.utils.lock.DistributeLock;
 import com.wxl.utils.lock.DistributeLockException;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.zookeeper.*;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.Stat;
+import org.springframework.util.Assert;
+import org.springframework.util.StringUtils;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Random;
 import java.util.SortedSet;
@@ -23,8 +28,17 @@ import static org.apache.zookeeper.Watcher.Event.EventType;
 
 /**
  * Created by wuxingle on 2018/1/29.
- * zk锁
- *
+ * zk分布式可重入锁
+ * 可能存在的问题是一个客户端拿到锁之后,由于网络问题,
+ * 服务器检测不到客户端,从而把这个节点删除,这样其他客户端会进行锁的竞争,
+ * 就会出现2个客户端同时在跑任务.
+ * 解决的方法是,搭建zk集群,合理设置sessionTimeout.
+ * 参考:
+ * zkClient实现
+ * zookeeper提供的实例代码WriteLock.java
+ * https://wiki.apache.org/hadoop/ZooKeeper/FAQ#A3
+ * http://blog.csdn.net/zhangyuan19880606/article/details/51508250
+ * http://www.cnblogs.com/wuxl360/p/5817540.html
  */
 @Slf4j
 @ThreadSafe
@@ -41,29 +55,31 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
 
     private Condition dataChangedCondition = zkLock.newCondition();
 
-    public ZkReentrantLock(String servers, String lockName) throws IOException, DistributeLockException {
+    public ZkReentrantLock(String servers, String lockName) throws DistributeLockException {
         this(true, servers, lockName);
     }
 
-    public ZkReentrantLock(boolean fair, String servers, String lockName) throws IOException, DistributeLockException {
+    public ZkReentrantLock(boolean fair, String servers, String lockName) throws DistributeLockException {
         this(fair, servers, DEFAULT_SESSION_TIMEOUT, lockName);
     }
 
-    public ZkReentrantLock(String servers, int sessionTimeout, String lockName) throws IOException, DistributeLockException {
+    public ZkReentrantLock(String servers, int sessionTimeout, String lockName) throws DistributeLockException {
         this(true, servers, sessionTimeout, lockName);
     }
 
-    public ZkReentrantLock(boolean fair, String servers, int sessionTimeout, String lockName) throws IOException, DistributeLockException {
+    public ZkReentrantLock(boolean fair, String servers, int sessionTimeout, String lockName) throws DistributeLockException {
         super(servers, sessionTimeout);
-        this.lockName = lockName;
+        Assert.isTrue(StringUtils.hasText(lockName) && !lockName.contains("-"),
+                "lockName can not empty and not contains '-' !");
         try {
+            connectBlock();
             ensurePathExist(ROOT_PATH);
         } catch (Exception e) {
             throw new DistributeLockException(e);
         }
+        this.lockName = lockName;
         sync = fair ? new FairSync() : new NonfairSync();
     }
-
 
     /**
      * zNode节点(name-sessionId-sequence)
@@ -109,6 +125,7 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
     /**
      * 同步接口
      */
+    @UnThreadSafe
     abstract class Sync {
         //锁重入次数
         private int lockCount;
@@ -137,6 +154,10 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
          */
         protected abstract ZNode createLockNode() throws KeeperException, InterruptedException, Exception;
 
+        /**
+         * 尝试获取锁,本身非线程安全
+         * 需要调用者实现线程安全
+         */
         public boolean tryAcquire() throws DistributeLockException {
             try {
                 if (isOwner()) {
@@ -151,18 +172,20 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
                     }
                     boolean waitNodeExist = false;
                     while (!waitNodeExist) {
+                        //获取孩子节点
                         SortedSet<ZNode> children = sortChildrenNode();
                         if (children.isEmpty()) {
                             myNode = null;
                             continue Label;
                         }
+                        //序号最小的获取锁
                         ownerNode = children.first();
                         log.debug("current lock node is {}", ownerNode);
                         SortedSet<ZNode> lessThanMe = children.headSet(myNode);
                         if (lessThanMe.isEmpty()) {
                             if (isOwner()) {
                                 lockCount++;
-                                log.info("zk lock success :{}",myNode);
+                                log.info("zk lock success :{}", myNode);
                                 return true;
                             }
                         } else {
@@ -181,6 +204,10 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
             return false;
         }
 
+        /**
+         * 尝试释放锁,本身非线程安全
+         * 需要调用者实现线程安全
+         */
         public boolean tryRelease() throws DistributeLockException {
             if (!isOwner()) {
                 throw new IllegalMonitorStateException();
@@ -218,8 +245,12 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
         private SortedSet<ZNode> sortChildrenNode() throws KeeperException, InterruptedException, Exception {
             List<String> children = retryUntilConnected(() -> getZooKeeper().getChildren(ROOT_PATH, false));
             SortedSet<ZNode> sortedSet = new TreeSet<>();
+            //获取同类的孩子节点,不至于拿到其他孩子
+            String similar = lockName + "-";
             for (String child : children) {
-                sortedSet.add(new ZNode(ROOT_PATH + "/" + child));
+                if (child.startsWith(similar)) {
+                    sortedSet.add(new ZNode(ROOT_PATH + "/" + child));
+                }
             }
             return sortedSet;
         }
@@ -234,8 +265,6 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
         /**
          * 创建锁节点
          * name-sessionId-sequence
-         * 节点创建时的sessionId不一定等于真实的sessionId,
-         * 有可能创建过程中进行了重连,但是只要保持唯一性即可
          */
         protected ZNode createLockNode() throws KeeperException, InterruptedException, Exception {
             while (true) {

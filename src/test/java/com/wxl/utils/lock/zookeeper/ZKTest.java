@@ -26,18 +26,9 @@ public class ZKTest {
             countDownLatch.await();
             System.out.println("连接成功");
 
-            String cPath = zooKeeper.create("/test", "haha".getBytes(),
-                    ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                    CreateMode.PERSISTENT);
-            System.out.println("create1:" + cPath);
+            zooKeeper.exists("/test",false);
 
-            Thread.currentThread().interrupt();
-
-            cPath = zooKeeper.create("/test2", "haha".getBytes(),
-                    ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                    CreateMode.PERSISTENT);
-            System.out.println("create2:" + cPath);
-
+            Thread.sleep(100000);
         } catch (IOException | InterruptedException | KeeperException e) {
             e.printStackTrace();
         } finally {

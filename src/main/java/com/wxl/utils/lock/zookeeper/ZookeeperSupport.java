@@ -34,14 +34,64 @@ public class ZookeeperSupport implements Watcher {
 
     private ZooKeeper zooKeeper;
 
-    public ZookeeperSupport(String servers) throws IOException {
+    public ZookeeperSupport(String servers) {
         this(servers, DEFAULT_SESSION_TIMEOUT);
     }
 
-    public ZookeeperSupport(String servers, int sessionTimeout) throws IOException {
+    public ZookeeperSupport(String servers, int sessionTimeout) {
         this.servers = servers;
         this.sessionTimeout = sessionTimeout;
-        connectBlock();
+    }
+
+    /**
+     * 阻塞式连接
+     */
+    public void connectBlock() throws IOException {
+        boolean start = false;
+        try {
+            zkLock.lock();
+            if (zooKeeper != null) {
+                throw new IllegalStateException("zk has already started!");
+            }
+            zooKeeper = new ZooKeeper(servers, sessionTimeout, this);
+            waitUntilConnected();
+            start = true;
+        } finally {
+            zkLock.unlock();
+            if (!start) {
+                close();
+            }
+        }
+    }
+
+    /**
+     * 断开
+     */
+    public void close() {
+        try {
+            zkLock.lock();
+            if (zooKeeper != null) {
+                zooKeeper.close();
+                zooKeeper = null;
+            }
+        } catch (InterruptedException e) {
+            log.error("zookeeper close error, because was interrupted");
+            throw new IllegalStateException(e);
+        } finally {
+            zkLock.unlock();
+        }
+    }
+
+    public ZooKeeper getZooKeeper() throws IllegalStateException {
+        try {
+            zkLock.lock();
+            if (zooKeeper == null) {
+                throw new IllegalStateException("zookeeper is close");
+            }
+            return zooKeeper;
+        } finally {
+            zkLock.unlock();
+        }
     }
 
     /**
@@ -55,8 +105,7 @@ public class ZookeeperSupport implements Watcher {
         }
         try {
             zkLock.lock();
-            KeeperState state = event.getState();
-            currentState = state;
+            currentState = event.getState();
             //如果是session过期,进行重连
             if (currentState == KeeperState.Expired) {
                 log.warn("zookeeper session is expired, try reconnect");
@@ -73,20 +122,11 @@ public class ZookeeperSupport implements Watcher {
         }
     }
 
-    protected ZooKeeper getZooKeeper(){
-        try {
-            zkLock.lock();
-            return zooKeeper;
-        }finally {
-            zkLock.unlock();
-        }
-    }
-
     /**
      * @param callable zk操作
-     * 对连接丢失,session过期进行无限重试
+     *                 对连接丢失,session过期进行无限重试
      */
-    protected  <T> T retryUntilConnected(Callable<T> callable) throws KeeperException, InterruptedException, Exception {
+    public <T> T retryUntilConnected(Callable<T> callable) throws KeeperException, InterruptedException, Exception {
         while (true) {
             try {
                 return callable.call();
@@ -99,9 +139,9 @@ public class ZookeeperSupport implements Watcher {
 
     /**
      * @param callable zk操作
-     * 只对session过期进行无限重试
+     *                 只对session过期进行无限重试
      */
-    protected  <T> T retryOnlySessionTimeout(Callable<T> callable) throws ConnectionLossException, KeeperException, InterruptedException, Exception {
+    public <T> T retryOnlySessionTimeout(Callable<T> callable) throws ConnectionLossException, KeeperException, InterruptedException, Exception {
         while (true) {
             try {
                 return callable.call();
@@ -135,8 +175,6 @@ public class ZookeeperSupport implements Watcher {
     }
 
 
-
-
     /**
      * 等待直到连接成功
      */
@@ -151,62 +189,6 @@ public class ZookeeperSupport implements Watcher {
         }
     }
 
-    /**
-     * 阻塞式连接
-     */
-    private void connectBlock() throws IOException {
-        boolean start = false;
-        try {
-            zkLock.lock();
-            if (zooKeeper != null) {
-                throw new IllegalStateException("zk has already started!");
-            }
-            zooKeeper = new ZooKeeper(servers, sessionTimeout, this);
-            waitUntilConnected();
-            start = true;
-        } finally {
-            zkLock.unlock();
-            if (!start) {
-                close();
-            }
-        }
-    }
-
-    /**
-     * 断开
-     */
-    private void close() {
-        try {
-            zkLock.lock();
-            if (zooKeeper != null) {
-                zooKeeper.close();
-                zooKeeper = null;
-            }
-        } catch (InterruptedException e){
-            log.error("zookeeper close error, because was interrupted");
-            throw new IllegalStateException(e);
-        } finally {
-            zkLock.unlock();
-        }
-    }
-
-
-
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
