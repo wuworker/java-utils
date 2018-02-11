@@ -15,6 +15,7 @@ import java.util.concurrent.*;
 /**
  * Created by wuxingle on 2017/12/11.
  * 随机批量插入数据
+ * 没有事务管理
  */
 @Slf4j
 public class BatchInsertHelper {
@@ -40,12 +41,6 @@ public class BatchInsertHelper {
     //一次性批量插入数据大小
     @Getter
     private int insertBatchMaxLimit = INSERT_BATCH_MAX_LIMIT;
-
-    public BatchInsertHelper(JdbcUtils jdbcUtils) {
-        Assert.notNull(jdbcUtils, "jdbcUtils can not null");
-        this.jdbcUtils = jdbcUtils;
-        forkJoinPool = new ForkJoinPool();
-    }
 
 
     public BatchInsertHelper(String driver, String url, String username, String password) throws ClassNotFoundException {
@@ -99,8 +94,8 @@ public class BatchInsertHelper {
 
 
     public void shutdown() throws SQLException {
-        jdbcUtils.close();
         forkJoinPool.shutdown();
+        jdbcUtils.close();
     }
 
     public void setSingleTaskMaxGenerateData(int singleTaskMaxGenerateData) {
@@ -192,8 +187,8 @@ public class BatchInsertHelper {
                     while (current < capacity) {
                         int max = capacity - current >= insertBatchMaxLimit ? insertBatchMaxLimit : capacity - current;
                         int num = queue.drainTo(list, max);
-                        //todo
                         if (num == 0) {
+                            Thread.yield();
                             continue;
                         }
                         String sql = generateInsertsSQL(tableName, num, fields.length);
@@ -217,7 +212,6 @@ public class BatchInsertHelper {
                         jdbcUtils.close();
                     } catch (SQLException e) {
                         log.error("jdbc connection close error",e);
-                        throw new IllegalArgumentException(e);
                     }
                 }
             } else {

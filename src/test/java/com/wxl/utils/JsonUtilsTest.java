@@ -121,6 +121,34 @@ public class JsonUtilsTest {
         System.out.println(JsonUtils.toPrettyFormat(list));
     }
 
+    @Test
+    public void testDoWithJson(){
+        Map<String,Object> json = new HashMap<>();
 
+        json = JsonUtils.put(json,"user.info","nice");
+        json = JsonUtils.put(json,"user.grade.0",99);
+        json = JsonUtils.put(json,"user.grade.3",100);
+        json = JsonUtils.put(json,"user.grade.2.a","aa");
+        json = JsonUtils.put(json,"name","yes");
+        System.out.println(JsonUtils.toPrettyFormat(json));
+
+        JsonUtils.doWithJson(json,(k,v)->{
+            System.out.println("key:" +k+",val:"+v);
+            if("grade".equals(k)){
+                List<Object> list = (List<Object>)v;
+                list.remove(1);
+                list.add("haha");
+                return list;
+            } else if("info".equals(k)){
+                return null;
+            }
+            return v;
+        });
+        System.out.println(JsonUtils.toPrettyFormat(json));
+
+        JsonUtils.doWithJson(json,null,(k,v)->"@"+k+"@");
+        System.out.println(JsonUtils.toPrettyFormat(json));
+    }
 
 }
+

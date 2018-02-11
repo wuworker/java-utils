@@ -16,7 +16,7 @@ import java.util.Random;
 public class BatchInsertHelperTest {
 
 
-    private static String url = "jdbc:mysql://127.0.0.1:3306/test_db?useSSL=false";
+    private static String url = "jdbc:mysql://127.0.0.1:3306/wxl_test?useSSL=false";
 
     private static String username = "root";
 
@@ -50,7 +50,7 @@ public class BatchInsertHelperTest {
     public void testInvokeBatchInsert() throws Exception {
         Random random = new Random();
         EntityGenerator<User> entityGenerator = new EntityGenerator<>(random,User.class);
-        int count = insertHelper.invokeBatchInsert("user_inf", User.class, 100_000, entityGenerator);
+        int count = insertHelper.invokeBatchInsert("user_info", User.class, 200_001,100_000, entityGenerator);
 
         System.out.println(count);
     }

@@ -59,9 +59,9 @@ public class AliasUtilsTest {
 
         System.out.println(JsonUtils.toPrettyFormat(json));
 
-        Map<String,Object> camelJson = AliasUtils.aliasJsonKey(json,AliasUtils::snakeToCamel);
+        AliasUtils.aliasJsonKey(json,AliasUtils::snakeToCamel);
 
-        System.out.println(JsonUtils.toPrettyFormat(camelJson));
+        System.out.println(JsonUtils.toPrettyFormat(json));
     }
 
 

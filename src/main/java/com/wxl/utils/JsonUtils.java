@@ -1,6 +1,7 @@
 package com.wxl.utils;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.serializer.SerializerFeature;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -8,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 /**
  * Created by wuxingle on 2018/1/5.
@@ -19,7 +21,7 @@ public class JsonUtils {
      * 格式化输出,必须为json对象
      */
     public static String toPrettyFormat(Object json) {
-        return JSON.toJSONString(json, true);
+        return JSON.toJSONString(json, SerializerFeature.PrettyFormat, SerializerFeature.WriteMapNullValue);
     }
 
     /**
@@ -266,6 +268,9 @@ public class JsonUtils {
     }
 
 
+    /**
+     * 删除key
+     */
     public static Object remove(Object json, String key) {
         return remove(json, key, null);
     }
@@ -290,14 +295,14 @@ public class JsonUtils {
                 return null;
             }
         }
-        if(findJson instanceof Map){
+        if (findJson instanceof Map) {
             Map<String, Object> map = (Map<String, Object>) findJson;
             return map.remove(keys[keys.length - 1]);
         }
-        if(findJson instanceof List){
+        if (findJson instanceof List) {
             List<Object> list = (List<Object>) findJson;
             int index = Integer.parseInt(keys[keys.length - 1]);
-            if(index >= list.size()){
+            if (index >= list.size()) {
                 return null;
             }
             return list.remove(index);
@@ -366,6 +371,80 @@ public class JsonUtils {
     }
 
 
+    /**
+     * json 遍历处理
+     */
+    public static void doWithJson(Object json, BiFunction<String, Object, Object> valueHandler) {
+        Assert.notNull(valueHandler, "value handler can not null");
+        doWithJson(json, valueHandler, null);
+    }
+
+    /**
+     * json 遍历处理
+     *
+     * @param json         json
+     * @param valueHandler json的value处理
+     * @param keyHandler   json的key处理
+     */
+    @SuppressWarnings("unchecked")
+    public static void doWithJson(Object json, BiFunction<String, Object, Object> valueHandler, BiFunction<String, Object, String> keyHandler) {
+        Assert.isTrue(valueHandler != null || keyHandler != null, "value or key ,must not null at least 1!");
+        if (json instanceof Map) {
+            doWithJson((Map<String, Object>) json, valueHandler, keyHandler);
+        } else if (json instanceof List) {
+            doWithJson((List<Object>) json, valueHandler, keyHandler);
+        } else {
+            throw new IllegalArgumentException("input must is a json(Map or List),but actual is " + json.getClass().getName());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void doWithJson(Map<String, Object> json, BiFunction<String, Object, Object> valueHandler, BiFunction<String, Object, String> keyHandler) {
+        if (keyHandler != null) {
+            Map<String, Object> map = new HashMap<>(json.size(), 1);
+            for (Map.Entry<String, Object> entry : json.entrySet()) {
+                String key = entry.getKey();
+                Object value = entry.getValue();
+                String name = keyHandler.apply(key, value);
+                if (valueHandler != null) {
+                    value = valueHandler.apply(key, value);
+                }
+                if (!StringUtils.hasText(name)) {
+                    continue;
+                }
+                if (value instanceof Map) {
+                    doWithJson((Map<String, Object>) value, valueHandler, keyHandler);
+                } else if (value instanceof List) {
+                    doWithJson((List<Object>) value, valueHandler, keyHandler);
+                }
+                map.put(name, value);
+            }
+            json.clear();
+            json.putAll(map);
+        } else {
+            for (Map.Entry<String, Object> entry : json.entrySet()) {
+                String key = entry.getKey();
+                Object value = valueHandler == null ? entry.getValue() : valueHandler.apply(key, entry.getValue());
+                if (value instanceof Map) {
+                    doWithJson((Map<String, Object>) value, valueHandler, null);
+                } else if (value instanceof List) {
+                    doWithJson((List<Object>) value, valueHandler, null);
+                }
+                entry.setValue(value);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void doWithJson(List<Object> json, BiFunction<String, Object, Object> valueHandler, BiFunction<String, Object, String> keyHandler) {
+        for (Object obj : json) {
+            if (obj instanceof Map) {
+                doWithJson((Map<String, Object>) obj, valueHandler, keyHandler);
+            }
+        }
+    }
+
 }
+
 
 

@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
  */
 public class JdbcUtilsTest {
 
-    private static String url = "jdbc:mysql://127.0.0.1:3306/test_db?useSSL=false";
+    private static String url = "jdbc:mysql://127.0.0.1:3306/wxl_test?useSSL=false";
 
     private static String username = "root";
 
@@ -49,6 +49,12 @@ public class JdbcUtilsTest {
         } catch (ClassNotFoundException e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    @Test
+    public void testCreateTab()throws SQLException{
+        Object show_create_table_user_info = jdbcUtils.query("show create table user_info");
+        System.out.println(show_create_table_user_info);
     }
 
 

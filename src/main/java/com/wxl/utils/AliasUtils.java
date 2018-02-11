@@ -16,13 +16,14 @@ public class AliasUtils {
 
 
     /**
-     * 蛇形命名转驼峰
+     * 蛇形转驼峰
+     * a_b -> aB
      */
     public static String snakeToCamel(String name) {
         if (!StringUtils.hasText(name)) {
             return name;
         }
-        int index = 0;
+        int index;
         while ((index = name.indexOf("_")) != -1) {
             //最后一位
             if (index == name.length() - 1) {
@@ -37,7 +38,16 @@ public class AliasUtils {
     }
 
     /**
-     * 驼峰命名转蛇形
+     * 蛇形转大驼峰
+     * a_b -> AB
+     */
+    public static String snakeToUpperCamel(String name){
+        return camelToUpper(snakeToCamel(name));
+    }
+
+    /**
+     * 驼峰转蛇形
+     * aB -> a_b
      */
     public static String camelToSnake(String name) {
         if (!StringUtils.hasText(name)) {
@@ -56,58 +66,46 @@ public class AliasUtils {
         return name;
     }
 
+    /**
+     * 大驼峰转蛇形
+     * AB -> a_b
+     */
+    public static String upperCamelToSnake(String name){
+        if (!StringUtils.hasText(name)) {
+            return name;
+        }
+        String snake = camelToSnake(name);
+        return snake.startsWith("_") ? snake.substring(1) : snake;
+    }
+
+    /**
+     * 小驼峰转大驼峰
+     * aB -> AB
+     */
+    public static String camelToUpper(String name){
+        if (!StringUtils.hasText(name)) {
+            return name;
+        }
+        return Character.toUpperCase(name.charAt(0)) + name.substring(1);
+    }
+
+    /**
+     * 大驼峰转小驼峰
+     * aB -> AB
+     */
+    public static String camelToLower(String name){
+        if (!StringUtils.hasText(name)) {
+            return name;
+        }
+        return Character.toLowerCase(name.charAt(0)) + name.substring(1);
+    }
+
 
     /**
      * 给json的key起别名
      */
-    @SuppressWarnings("unchecked")
-    public static Object aliasJsonKey(Object json, Function<String,String> alias){
-        if(json instanceof Map){
-            Map<String,Object> map = (Map<String,Object>)json;
-            return aliasJsonKey(map,alias);
-        }
-        if(json instanceof List){
-            List<Object> list = (List<Object>)json;
-            return aliasJsonKey(list,alias);
-        }
-        throw new IllegalArgumentException("input must is a json(Map or List),but actual is "+ json.getClass().getName());
-    }
-
-    @SuppressWarnings("unchecked")
-    public static Map<String,Object> aliasJsonKey(Map<String,Object> json, Function<String,String> alias){
-        Map<String,Object> map = new HashMap<>(json.size());
-        for(Map.Entry<String,Object> entry:json.entrySet()){
-            String key = entry.getKey();
-            Object value = entry.getValue();
-            String name = alias.apply(key);
-            if(name == null){
-                name = key;
-            }
-            if(value instanceof Map){
-                Map<String,Object> valueMap = (Map<String,Object>)value;
-                value = aliasJsonKey(valueMap,alias);
-            }
-            if(value instanceof List){
-                List<Object> valueList = (List<Object>)value;
-                value = aliasJsonKey(valueList,alias);
-            }
-
-            map.put(name,value);
-        }
-        return map;
-    }
-
-    @SuppressWarnings("unchecked")
-    public static List<Object> aliasJsonKey(List<Object> json, Function<String,String> alias){
-        List<Object> list = new ArrayList<>(json.size());
-        for(Object obj:json){
-            if(obj instanceof Map){
-                list.add(aliasJsonKey((Map<String,Object>)obj,alias));
-            } else {
-                list.add(obj);
-            }
-        }
-        return list;
+    public static void aliasJsonKey(Object json, final Function<String, String> alias) {
+        JsonUtils.doWithJson(json, null, (k, v) -> alias.apply(k));
     }
 
 }

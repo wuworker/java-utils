@@ -41,6 +41,9 @@ public class JsonXmlConverter {
     //属性前缀标识
     private String attrPrefix;
 
+    //空字符是否转为null
+    private boolean emptyStringToNull;
+
     /**
      * 当出现只有value没有key时,使用这个默认的key
      * 比如:
@@ -117,11 +120,16 @@ public class JsonXmlConverter {
         } else {
             Map<String, Object> child = new LinkedHashMap<>();
             if (containAttr) {
+                String val;
                 for (Attribute attr : attributes) {
-                    child.put(attrPrefix + (containNs ? attr.getQualifiedName() : attr.getName()), attr.getValue());
+                    val = attr.getValue();
+                    child.put(attrPrefix + (containNs ? attr.getQualifiedName() : attr.getName()),
+                            emptyStringToNull && !StringUtils.hasText(val) ? null : val);
                 }
                 if (elements.isEmpty()) {
-                    child.put(StringUtils.isEmpty(defaultJsonKey) ? DEFAULT_JSON_KEY : defaultJsonKey, element.getTextTrim());
+                    val = element.getTextTrim();
+                    child.put(StringUtils.isEmpty(defaultJsonKey) ? DEFAULT_JSON_KEY : defaultJsonKey,
+                            emptyStringToNull && !StringUtils.hasText(val) ? null : val);
                 }
             }
             for (Element ele : elements) {
@@ -172,6 +180,7 @@ public class JsonXmlConverter {
     public String xmlToJsonString(Element element, boolean format) {
         return JSON.toJSONString(xmlToJson(element), format);
     }
+
 
     /**
      * json字符串转xml对象

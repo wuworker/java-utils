@@ -24,9 +24,14 @@ public class JsonXmlConverterTest {
                 "<Body>" +
                 "<sayHi name=\"wxl\">hi!</sayHi>" +
                 "<sayHi name=\"wxl\">hi2!</sayHi>" +
+                "<sayHi name=\"wxl\"></sayHi>" +
                 "</Body>" +
                 "</Envelope>";
         String json = jsonXmlConverter.xmlToJsonString(xml, true);
+        System.out.println(json);
+
+        jsonXmlConverter.setEmptyStringToNull(true);
+        json = jsonXmlConverter.xmlToJsonString(xml, true);
         System.out.println(json);
 
         jsonXmlConverter.setAttrPrefix("@");

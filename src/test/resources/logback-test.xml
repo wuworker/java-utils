@@ -7,11 +7,11 @@
         </encoder>
     </appender>
 
-    <logger name="com.wxl.utils" level="INFO" additivity="false">
+    <logger name="com.wxl.utils" level="DEBUG" additivity="false">
         <appender-ref ref="STDOUT" />
     </logger>
 
-    <root level="INFO">
+    <root level="DEBUG">
         <appender-ref ref="STDOUT" />
     </root>
 
