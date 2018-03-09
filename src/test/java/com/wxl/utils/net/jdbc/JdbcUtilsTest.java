@@ -1,6 +1,5 @@
 package com.wxl.utils.net.jdbc;
 
-import com.wxl.utils.net.jdbc.impl.SnakeToCamelMapping;
 import lombok.Data;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -57,25 +56,36 @@ public class JdbcUtilsTest {
         System.out.println(show_create_table_user_info);
     }
 
+    @Test
+    public void testQuerySingle() throws SQLException {
+        Integer count1 = jdbcUtils.querySingle(Integer.class,"select count(*) from user_info");
+        Long count2 = jdbcUtils.querySingle(Long.class,"select count(*) from user_info");
+        System.out.println(count1 +","+count2);
+    }
 
     @Test
     public void testQuerySingleField() throws SQLException {
-        List<Object> list = jdbcUtils.querySingleField("select name from t_user");
+        List<String> list = jdbcUtils.querySingleField(String.class,"select name from user_info");
         System.out.println(list);
     }
 
+    @Test
+    public void testQuerySingleRow() throws SQLException {
+        Map<String,Object> map = jdbcUtils.querySingleRow("select * from user_info limit 1");
+        System.out.println(map);
+    }
 
     @Test
     public void testQueryMap() throws SQLException {
-        List<Map<String, Object>> query = jdbcUtils.query("select id,name,age from t_user where id>? and name like ?",
-                1, "%a%");
+        List<Map<String, Object>> query = jdbcUtils.query("select id,name,age from user_info where age > ?",
+                1000);
         System.out.println(query);
     }
 
 
     @Test
     public void testQueryClass() throws Exception {
-        List<User> users = jdbcUtils.query(User.class, new SnakeToCamelMapping(),
+        List<User> users = jdbcUtils.query(User.class, (name)->name,
                 "select id,name,age,create_time,money from t_user where name like ?", "%e");
         System.out.println(users);
     }

@@ -102,42 +102,62 @@ public class ReflectUtils {
         }
     }
 
-
     /**
-     * 把int数值转为对应的类
+     * 把数值类型的value转为目标数值类型
      */
-    public static Object convertNumber(Class<?> clazz, int value) {
+    public static Object convertNumber(Class<?> clazz, Object value) {
         Assert.notNull(clazz, "class can not null");
         Assert.notNull(value, "value can not null");
-        if (isNumber(clazz)) {
+        Class<?> valueClass = value.getClass();
+        if (isNumber(clazz) && isNumber(valueClass)) {
             if (clazz == Long.class || clazz == long.class) {
-                return (long) value;
+                return valueClass == Character.class ? (long) ((char) value) : ((Number) value).longValue();
             } else if (clazz == Integer.class || clazz == int.class) {
-                return value;
+                return valueClass == Character.class ? (int) ((char) value) : ((Number) value).intValue();
             } else if (clazz == Short.class || clazz == short.class) {
-                return (short) value;
+                return valueClass == Character.class ? (short) ((char) value) : ((Number) value).shortValue();
             } else if (clazz == Character.class || clazz == char.class) {
-                return (char) value;
+                return valueClass == Character.class ? value : (char) (((Number) value).shortValue());
             } else if (clazz == Byte.class || clazz == byte.class) {
-                return (byte) value;
+                return valueClass == Character.class ? (byte) ((char) value) : ((Number) value).byteValue();
             } else if (clazz == Float.class || clazz == float.class) {
-                return (float) value;
+                return valueClass == Character.class ? (float) ((char) value) : ((Number) value).floatValue();
             } else if (clazz == Double.class || clazz == double.class) {
-                return (double) value;
+                return valueClass == Character.class ? (double) ((char) value) : ((Number) value).doubleValue();
             } else if (clazz == BigDecimal.class) {
-                return new BigDecimal(value);
+                return valueClass == Character.class ? new BigDecimal(((char) value)) : new BigDecimal(((Number) value).doubleValue());
             }
         }
-        return null;
+        throw new ClassCastException("clazz and value must is number or character");
     }
+
 
     /**
      * 判断是否是数值
      */
     public static boolean isNumber(Class<?> clazz) {
         return Number.class.isAssignableFrom(clazz)
-                || (clazz.isPrimitive() && clazz != boolean.class);
+                || (clazz.isPrimitive() && clazz != boolean.class)
+                || clazz == Character.class;
+    }
+
+    /**
+     * 对数值的安全类型转换
+     * @param clazz 目标类型
+     * @param value 实际值
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T castSafeOfNumber(Class<T> clazz, Object value) throws ClassCastException{
+        if(isNumber(clazz) && isNumber(value.getClass())){
+            value = convertNumber(clazz,value);
+            return (T)value;
+        }
+        return (T)value;
     }
 
 
 }
+
+
+
+

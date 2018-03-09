@@ -136,8 +136,10 @@ public class EntityGenerator<T> {
             return RandomUtils.generateDate(random, minDate, maxDate);
         } else if (clazz == Boolean.class || clazz == boolean.class) {
             return random.nextBoolean();
-        } else {
+        } else if(ReflectUtils.isNumber(clazz)){
             return ReflectUtils.convertNumber(clazz, RandomUtils.generateInt(minNum, maxNum));
+        } else {
+            return null;
         }
     }
 

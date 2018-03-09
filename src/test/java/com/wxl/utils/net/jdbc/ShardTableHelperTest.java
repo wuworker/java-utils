@@ -6,6 +6,7 @@ import org.junit.Test;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by wuxingle on 2018/02/08
@@ -41,23 +42,56 @@ public class ShardTableHelperTest {
 
     @Test
     public void testCreateShardTable() throws SQLException {
-        shardTableHelper.createShardTable(templateTable, shardTables);
+        shardTableHelper.createTablesLike(templateTable, shardTables);
     }
 
 
     @Test
     public void testDropShardTable() throws SQLException {
-        shardTableHelper.dropShardTable(shardTables);
+        shardTableHelper.dropTables(shardTables);
     }
-
 
     @Test
-    public void testQueryAll()throws SQLException {
-        String data = shardTableHelper.formatQueryOfShardTable(templateTable, shardTables, "select * from user_info");
-        System.out.println(data);
+    public void testClearTables() throws SQLException {
+        Map<String, Integer> map = shardTableHelper.clearTables(shardTables);
+        System.out.println(map);
     }
 
+    @Test
+    public void testQuery()throws SQLException{
+        Map<String, Integer> map = shardTableHelper.querySingle(Integer.class, templateTable, shardTables,
+                "select count(*) from user_info");
+        System.out.println(map);
+        Map<String, List<String>> singleField = shardTableHelper.querySingleField(String.class, templateTable, shardTables,
+                "select name from user_info");
+        System.out.println(singleField);
+        Map<String, Map<String, Object>> singleRow = shardTableHelper.querySingleRow(templateTable, shardTables,
+                "select * from user_info limit 1");
+        System.out.println(singleRow);
 
+        Map<String, List<Map<String, Object>>> all = shardTableHelper.query(templateTable, shardTables,
+                "select name,age from user_info where createTime > ?","2010-01-01 00:00:00");
+        System.out.println(all);
+    }
+
+    @Test
+    public void testCount()throws SQLException{
+        long sumAge1 = shardTableHelper.countShardTables(templateTable,shardTables,
+                "select sum(age) from user_info");
+        long allCount = shardTableHelper.countShardTables(templateTable,shardTables,
+                "select count(*) from user_info");
+        System.out.println(sumAge1);
+        System.out.println(allCount);
+    }
+
+    @Test
+    public void testShardTableData() throws SQLException {
+        shardTableHelper.shardTableData("user_info", 10, (data) -> {
+            int id = (int) data.get("id");
+            int f = id % 5 + 1;
+            return "user_info_" + f;
+        });
+    }
 
 }
 

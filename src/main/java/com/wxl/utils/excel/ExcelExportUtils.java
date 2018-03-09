@@ -284,7 +284,6 @@ public class ExcelExportUtils {
 
     /**
      * 设置列宽
-     *
      * @param charNum 字符数
      */
     private static void setColumnWidth(Sheet sheet, int index, int charNum) {
@@ -297,6 +296,9 @@ public class ExcelExportUtils {
      */
     private static boolean setSafeColumnWidth(Sheet sheet, int index, int charNum) {
         int oldLen = sheet.getColumnWidth(index);
+        if(charNum > 30){
+            charNum = 30;
+        }
         if (oldLen < charNum * 256) {
             setColumnWidth(sheet, index, charNum);
             return true;

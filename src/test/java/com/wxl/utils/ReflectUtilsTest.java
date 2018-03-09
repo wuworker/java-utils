@@ -3,6 +3,7 @@ package com.wxl.utils;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
+import java.math.BigDecimal;
 
 /**
  * Created by wuxingle on 2017/11/24 0024.
@@ -67,7 +68,36 @@ public class ReflectUtilsTest {
     }
 
 
+    @Test
+    public void testConvertNumber() {
+        int a = 100;
+        float b = 100.5f;
+        Byte c = 100;
+        char d = 'a';
 
+        System.out.println(ReflectUtils.convertNumber(Long.class,a).getClass());
+        System.out.println(ReflectUtils.convertNumber(Long.class,b).getClass());
+        System.out.println(ReflectUtils.convertNumber(Long.class,c).getClass());
+        System.out.println(ReflectUtils.convertNumber(Long.class,d).getClass());
+
+        System.out.println(ReflectUtils.convertNumber(Character.class,a).getClass());
+        System.out.println(ReflectUtils.convertNumber(Character.class,b).getClass());
+        System.out.println(ReflectUtils.convertNumber(Character.class,c).getClass());
+        System.out.println(ReflectUtils.convertNumber(Character.class,d).getClass());
+
+
+        long a1 = ReflectUtils.castSafeOfNumber(Long.class,a);
+        long b1 = ReflectUtils.castSafeOfNumber(Long.class,b);
+        long c1 = ReflectUtils.castSafeOfNumber(Long.class,c);
+        long d1 = ReflectUtils.castSafeOfNumber(Long.class,d);
+        System.out.println(a1+","+b1+","+c1+","+d1);
+
+        Double a2 = ReflectUtils.castSafeOfNumber(Double.class,a);
+        Double b2 = ReflectUtils.castSafeOfNumber(Double.class,b);
+        Double c2 = ReflectUtils.castSafeOfNumber(Double.class,c);
+        Double d2 = ReflectUtils.castSafeOfNumber(Double.class,d);
+        System.out.println(a2+","+b2+","+c2+","+d2);
+    }
 
 
 

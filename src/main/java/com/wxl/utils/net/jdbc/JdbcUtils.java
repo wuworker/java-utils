@@ -74,14 +74,13 @@ public class JdbcUtils {
     }
 
     /**
-     * 查第一行的单个字段
+     * 查一行单字段
      */
-    public Object querySingleRowAndField(String sql, Object... params) throws SQLException {
-        return querySingleRowAndField(Object.class, sql, params);
+    public Object querySingle(String sql, Object... params) throws SQLException {
+        return querySingle(Object.class, sql, params);
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> T querySingleRowAndField(Class<T> clazz, String sql, Object... params) throws SQLException {
+    public <T> T querySingle(Class<T> clazz, String sql, Object... params) throws SQLException {
         Assert.notNull(clazz, "class can not null");
         List<Object> list = querySingleField(sql, params);
         if (list.isEmpty()) {
@@ -92,27 +91,62 @@ public class JdbcUtils {
         }
         Object o = list.get(0);
         if (o == null) return null;
-        if (clazz.isInstance(o)) {
-            return (T) o;
-        }
-        throw new ClassCastException("sql result class is " + o.getClass().getName() + ",can not cast to " + clazz.getName());
+        return ReflectUtils.castSafeOfNumber(clazz, o);
     }
 
     /**
-     * 查询单个字段
+     * 查一行多个字段
+     */
+    public Map<String, Object> querySingleRow(String sql, Object... params) throws SQLException {
+        List<Map<String, Object>> list = query(sql, params);
+        if (list.size() > 1) {
+            throw new SQLException("sql result row find " + list.size() + ",but expect is one!");
+        }
+        if (list.isEmpty()) {
+            return new HashMap<>();
+        }
+        return list.get(0);
+    }
+
+    /**
+     * 查询多行单个字段
      */
     public List<Object> querySingleField(String sql, Object... params) throws SQLException {
-        return query((map) -> map.values().iterator().next(), sql, params);
+        return querySingleField(Object.class, sql, params);
     }
 
+    public <T> List<T> querySingleField(final Class<T> clazz, String sql, Object... params) throws SQLException {
+        return query((map) -> {
+            if (map.size() > 1) {
+                throw new SQLException("sql result field find " + map.size() + ", " + map + " ,but expect is one!");
+            }
+            if (map.isEmpty()) {
+                return null;
+            }
+            return ReflectUtils.castSafeOfNumber(clazz, map.values().iterator().next());
+        }, sql, params);
+    }
 
     /**
-     * 查询多个字段
+     * 查询多行多个字段
      */
     public List<Map<String, Object>> query(String sql, Object... params) throws SQLException {
         return query((map) -> map, sql, params);
     }
 
+
+    /**
+     * 数据库字段到实体类的映射
+     */
+    public interface JdbcMapping {
+
+        /**
+         * @param name 数据库字段
+         * @return 实体类字段
+         */
+        String mapping(String name);
+
+    }
 
     /**
      * 查询并转为类
@@ -140,6 +174,20 @@ public class JdbcUtils {
         }, sql, params);
     }
 
+
+    /**
+     * 记录行处理
+     */
+    public interface JdbcRowHandler<T> {
+
+        /**
+         * 处理一行数据
+         *
+         * @param data 数据
+         * @return 处理结果
+         */
+        T handleRow(Map<String, Object> data) throws SQLException;
+    }
 
     /**
      * 查询
@@ -256,8 +304,8 @@ public class JdbcUtils {
         if (field == null) {
             return;
         }
+        Class<?> clazz = field.getType();
         if (value instanceof Date) {
-            Class<?> clazz = field.getType();
             if (clazz == Date.class) {
                 ReflectUtils.setObjectValue(obj, field, value);
             } else if (clazz == String.class) {
@@ -269,6 +317,11 @@ public class JdbcUtils {
                 throw new IllegalStateException("can not cast java.util.Date to " + clazz.getName());
             }
         } else {
+            if (value != null) {
+                if (ReflectUtils.isNumber(clazz) && ReflectUtils.isNumber(value.getClass())) {
+                    value = ReflectUtils.convertNumber(clazz, value);
+                }
+            }
             ReflectUtils.setObjectValue(obj, field, value);
         }
     }
@@ -281,5 +334,6 @@ public class JdbcUtils {
         }
         return connections.get();
     }
+
 
 }
