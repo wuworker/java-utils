@@ -1,6 +1,7 @@
 package com.wxl.utils.map;
 
 import com.wxl.utils.ThreadUtils;
+import com.wxl.utils.collection.LazyCacheMap;
 import org.junit.Test;
 import org.springframework.util.ReflectionUtils;
 import org.springframework.util.SerializationUtils;
@@ -17,7 +18,7 @@ public class LazyCacheMapTest {
     /**
      * 打印cacheMap状态
      */
-    private static void printLazyCacheMapField(LazyCacheMap lazyCacheMap,boolean printSelf) {
+    private static void printLazyCacheMapField(LazyCacheMap lazyCacheMap, boolean printSelf) {
         Field table = ReflectionUtils.findField(LazyCacheMap.class, "table");
         table.setAccessible(true);
         Field size = ReflectionUtils.findField(LazyCacheMap.class, "size");

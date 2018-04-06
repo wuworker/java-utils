@@ -1,4 +1,4 @@
-package com.wxl.utils.map;
+package com.wxl.utils.collection;
 
 import com.wxl.utils.annotation.UnThreadSafe;
 import org.springframework.util.Assert;

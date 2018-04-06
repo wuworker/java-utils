@@ -1,6 +1,7 @@
 package com.wxl.utils.map;
 
 import com.wxl.utils.RandomUtils;
+import com.wxl.utils.collection.TimerClearMap;
 import org.junit.Test;
 
 import java.util.Random;

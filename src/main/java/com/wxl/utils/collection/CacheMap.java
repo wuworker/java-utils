@@ -1,4 +1,4 @@
-package com.wxl.utils.map;
+package com.wxl.utils.collection;
 
 import java.util.Map;
 
