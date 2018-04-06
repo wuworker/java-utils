@@ -25,6 +25,7 @@
         <poi.version>3.17</poi.version>
         <fastjson.version>1.2.41</fastjson.version>
         <zookeeper.version>3.4.10</zookeeper.version>
+        <redis.version>2.9.0</redis.version>
     </properties>
 
     <dependencies>
@@ -57,6 +58,13 @@
             <artifactId>zkclient</artifactId>
             <version>0.1</version>
             <optional>true</optional>
+        </dependency>
+
+        <!-- redis -->
+        <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>${redis.version}</version>
         </dependency>
 
         <!-- dom4j -->

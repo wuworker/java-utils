@@ -212,7 +212,7 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
             if (!isOwner()) {
                 throw new IllegalMonitorStateException();
             }
-            if (--lockCount == 0) {
+            if (lockCount == 1) {
                 try {
                     retryUntilConnected(() -> {
                         getZooKeeper().delete(myNode.name, -1);
@@ -220,16 +220,19 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
                     });
                     log.info("release lock success, node is {}, reentrant count is 0", myNode);
                     myNode = null;
+                    lockCount--;
                 }
                 //可能连接丢失的时候进行了重试,但其实执行成功了
                 catch (NoNodeException e) {
                     myNode = null;
+                    lockCount--;
                 } catch (KeeperException | InterruptedException e) {
                     throw new DistributeLockException(e);
                 } catch (Exception e) {
                     throw new DistributeLockException(e);
                 }
             } else {
+                lockCount--;
                 log.info("release success, node is {}, reentrant count is {}", myNode, lockCount);
             }
             return true;
@@ -365,14 +368,14 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
 
     @Override
     public boolean tryLock() throws DistributeLockException {
-        boolean tryLock = false, tryAcquire = false;
+        boolean local = false, remote = false;
         try {
-            if (tryLock = zkLock.tryLock()) {
-                return tryAcquire = sync.tryAcquire();
+            if (local = zkLock.tryLock()) {
+                return remote = sync.tryAcquire();
             }
         } finally {
             //本地锁成功,远程锁失败,算失败
-            if (tryLock && !tryAcquire) {
+            if (local && !remote) {
                 zkLock.unlock();
             }
         }
@@ -381,10 +384,10 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
 
     @Override
     public boolean tryLock(long time, TimeUnit unit) throws InterruptedException, DistributeLockException {
-        boolean tryLock = false, tryAcquire = false;
+        boolean local = false, remote = false;
         long start = System.nanoTime();
         try {
-            if (tryLock = zkLock.tryLock(time, unit)) {
+            if (local = zkLock.tryLock(time, unit)) {
                 long use = System.nanoTime() - start;
                 long need = unit.toNanos(time) - use;
                 while (!sync.tryAcquire()) {
@@ -397,10 +400,10 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
                         return false;
                     }
                 }
-                return tryAcquire = true;
+                return remote = true;
             }
         } finally {
-            if (tryLock && !tryAcquire) {
+            if (local && !remote) {
                 zkLock.unlock();
             }
         }
