@@ -6,7 +6,8 @@ import redis.clients.jedis.JedisPubSub;
 import redis.clients.jedis.exceptions.JedisException;
 import redis.clients.util.Pool;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,7 +15,9 @@ import java.util.function.Function;
 
 /**
  * Created by wuxingle on 2018/03/12
- * redis操作
+ * redis操作，只实现了string类型的操作
+ * 使用jedis实现,支持单实例,或者主从结构
+ * 不支持集群、和客户端分片,因为使用的是jedis类
  */
 public class RedisSupport {
 
@@ -24,13 +27,9 @@ public class RedisSupport {
     public static final String STATUS_RESULT_SUCCESS = "OK";
 
     //持久化的key
-    public static final Long  KEY_PERSISTENT_RESULT = -1L;
-    //key不存在
-    public static final Long KEY_NOT_EXISTS_RESULT = -2L;
+    public static final Long KEY_PERSISTENT = -1L;
 
-
-    private static final String DEL_WITH_VALUE_EQUALS_SCRPIT =
-            "if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('del', KEYS[1]) else return 0 end";
+    public static final Long KEY_NOT_EXIST = -2L;
 
     private Pool<Jedis> pool;
 
@@ -59,7 +58,7 @@ public class RedisSupport {
 
         private final JedisPubSub jedisPubSub;
 
-        public JedisUnsuber(JedisPubSub jedisPubSub) {
+        private JedisUnsuber(JedisPubSub jedisPubSub) {
             this.jedisPubSub = jedisPubSub;
         }
 
@@ -82,6 +81,37 @@ public class RedisSupport {
         }
     }
 
+    /**
+     * 执行lua脚本
+     */
+    public Object eval(String script, List<String> keys, List<String> values) {
+        return eval(script, keys, values, Object.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T eval(String script, List<String> keys, List<String> values, Class<T> clazz)
+            throws JedisException {
+        return doWithJedis(jedis -> (T) jedis.eval(script, keys, values));
+    }
+
+    public Object eval(String script, Integer keyNum, String... args) {
+        return eval(script, Object.class, keyNum, args);
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T eval(String script, Class<T> clazz, Integer keyNum, String... args)
+            throws JedisException {
+        List<String> keys = new ArrayList<>(keyNum);
+        List<String> values = new ArrayList<>(args.length - keyNum);
+        for (int i = 0; i < args.length; i++) {
+            if (i < keyNum) {
+                keys.add(args[i]);
+            } else {
+                values.add(args[i]);
+            }
+        }
+        return doWithJedis(jedis -> (T) jedis.eval(script, keys, values));
+    }
 
     /**
      * 获取值
@@ -151,26 +181,13 @@ public class RedisSupport {
     }
 
     /**
-     * key和value都相等则删除
-     */
-    public boolean del(final String key, final String value) throws JedisException {
-        return doWithJedis(jedis -> NUMBER_RESULT_SUCCESS.equals(jedis.eval(DEL_WITH_VALUE_EQUALS_SCRPIT,
-                Collections.singletonList(key), Collections.singletonList(value))));
-    }
-
-    public boolean del(final byte[] key, final byte[] value) throws JedisException {
-        return doWithJedis(jedis -> NUMBER_RESULT_SUCCESS.equals(jedis.eval(DEL_WITH_VALUE_EQUALS_SCRPIT.getBytes(),
-                Collections.singletonList(key), Collections.singletonList(value))));
-    }
-
-    /**
      * 删除多个key
      */
     public Long delWithPre(String key) throws JedisException {
         return delWithPattern(key + "*");
     }
 
-    public Long delWithSuf(String key) throws JedisException {
+    public Long delWithEnd(String key) throws JedisException {
         return delWithPattern("*" + key);
     }
 
@@ -202,11 +219,11 @@ public class RedisSupport {
      * 返回剩余时间
      * 秒
      */
-    public Long ttl(final String key){
+    public Long ttl(final String key) {
         return doWithJedis(jedis -> jedis.ttl(key));
     }
 
-    public Long ttl(final byte[] key){
+    public Long ttl(final byte[] key) {
         return doWithJedis(jedis -> jedis.ttl(key));
     }
 
@@ -214,11 +231,11 @@ public class RedisSupport {
      * 返回剩余时间
      * 毫秒
      */
-    public Long pttl(final String key){
+    public Long pttl(final String key) {
         return doWithJedis(jedis -> jedis.pttl(key));
     }
 
-    public Long pttl(final byte[] key){
+    public Long pttl(final byte[] key) {
         return doWithJedis(jedis -> jedis.pttl(key));
     }
 

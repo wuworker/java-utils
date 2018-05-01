@@ -5,6 +5,7 @@ import com.wxl.utils.net.http.HttpResponsed;
 import com.wxl.utils.net.http.HttpUtils;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,6 +112,12 @@ public class SimpleHttpUtilsTest {
         List<String> methods = httpUtils.doOptions("http://localhost:8888/simple/all");
 
         System.out.println(methods);
+    }
+
+    @Test
+    public void doGetHttps() throws IOException {
+        byte[] bytes = SimpleHttpUtils.createDefault().doGet("https://127.0.0.1:8443");
+        System.out.println(new String(bytes));
     }
 
 

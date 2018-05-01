@@ -65,6 +65,7 @@
             <groupId>redis.clients</groupId>
             <artifactId>jedis</artifactId>
             <version>${redis.version}</version>
+            <optional>true</optional>
         </dependency>
 
         <!-- dom4j -->

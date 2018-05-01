@@ -1,9 +1,10 @@
 package com.wxl.utils.lock.zookeeper;
 
 import com.wxl.utils.annotation.ThreadSafe;
-import com.wxl.utils.annotation.UnThreadSafe;
 import com.wxl.utils.lock.DistributeLock;
 import com.wxl.utils.lock.DistributeLockException;
+import com.wxl.utils.lock.DistributeSync;
+import com.wxl.utils.lock.SafeDistributeLock;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -20,7 +21,6 @@ import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static org.apache.zookeeper.KeeperException.ConnectionLossException;
 import static org.apache.zookeeper.KeeperException.NoNodeException;
@@ -46,14 +46,14 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
 
     private static final String ROOT_PATH = "/locks";
 
-    private final Sync sync;
-
     //锁的名字
     private String lockName;
 
-    private Lock zkLock = new ReentrantLock();
+    private Lock localLock;
 
-    private Condition dataChangedCondition = zkLock.newCondition();
+    private Condition localCondition;
+
+    private SafeDistributeLock distributeLock;
 
     public ZkReentrantLock(String servers, String lockName) throws DistributeLockException {
         this(true, servers, lockName);
@@ -78,7 +78,9 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
             throw new DistributeLockException(e);
         }
         this.lockName = lockName;
-        sync = fair ? new FairSync() : new NonfairSync();
+        this.distributeLock = new SafeDistributeLock(fair ? new FairZkSync() : new NonfairZkSync());
+        localLock = distributeLock.getLocalLock();
+        localCondition = distributeLock.getLocalCondition();
     }
 
     /**
@@ -122,11 +124,8 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
         }
     }
 
-    /**
-     * 同步接口
-     */
-    @UnThreadSafe
-    abstract class Sync {
+
+    abstract class ZkSync implements DistributeSync {
         //锁重入次数
         private int lockCount;
         //当前节点
@@ -142,10 +141,10 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
             }
             try {
                 log.debug("node to release:{}", event.getPath());
-                zkLock.lock();
-                dataChangedCondition.signalAll();
+                localLock.lock();
+                localCondition.signalAll();
             } finally {
-                zkLock.unlock();
+                localLock.unlock();
             }
         };
 
@@ -264,7 +263,7 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
      * 利用zk的临时顺序节点,
      * 进行节点的排序,序号小的优先获取锁
      */
-    final class FairSync extends Sync {
+    final class FairZkSync extends ZkSync {
         /**
          * 创建锁节点
          * name-sessionId-sequence
@@ -278,10 +277,10 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
                             pathString, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL_SEQUENTIAL));
                     return new ZNode(path);
                 }
-            /*
-             * 连接丢失,此时节点可能已经创建,
-             * 需要重新获取子节点,判断是否已经创建
-             */ catch (ConnectionLossException e) {
+                /*
+                 * 连接丢失,此时节点可能已经创建,
+                 * 需要重新获取子节点,判断是否已经创建
+                 */ catch (ConnectionLossException e) {
                     List<String> children = retryUntilConnected(() -> getZooKeeper().getChildren(ROOT_PATH, false));
                     for (String child : children) {
                         if (child.contains(sessionId)) {
@@ -298,7 +297,7 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
      * 利用zk的临时节点加上随机数进行排序
      * 序号小的优先获取锁
      */
-    final class NonfairSync extends Sync {
+    final class NonfairZkSync extends ZkSync {
 
         private Random random = new Random();
 
@@ -319,10 +318,10 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
                             pathString, null, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL));
                     return new ZNode(path);
                 }
-            /*
-             * 连接丢失,此时节点可能已经创建,
-             * 需要重新获取子节点,判断是否已经创建
-             */ catch (ConnectionLossException e) {
+                /*
+                 * 连接丢失,此时节点可能已经创建,
+                 * 需要重新获取子节点,判断是否已经创建
+                 */ catch (ConnectionLossException e) {
                     List<String> children = retryUntilConnected(() -> getZooKeeper().getChildren(ROOT_PATH, false));
                     for (String child : children) {
                         if (child.contains(sessionId)) {
@@ -336,87 +335,27 @@ public class ZkReentrantLock extends ZookeeperSupport implements DistributeLock 
 
     @Override
     public void lock() throws DistributeLockException {
-        boolean suc = false;
-        try {
-            zkLock.lock();
-            while (!sync.tryAcquire()) {
-                dataChangedCondition.awaitUninterruptibly();
-            }
-            suc = true;
-        } finally {
-            if (!suc) {
-                zkLock.unlock();
-            }
-        }
+        distributeLock.lock();
     }
 
     @Override
     public void lockInterruptibly() throws InterruptedException, DistributeLockException {
-        boolean suc = false;
-        try {
-            zkLock.lock();
-            while (!sync.tryAcquire()) {
-                dataChangedCondition.await();
-            }
-            suc = true;
-        } finally {
-            if (!suc) {
-                zkLock.unlock();
-            }
-        }
+        distributeLock.lockInterruptibly();
     }
 
     @Override
     public boolean tryLock() throws DistributeLockException {
-        boolean local = false, remote = false;
-        try {
-            if (local = zkLock.tryLock()) {
-                return remote = sync.tryAcquire();
-            }
-        } finally {
-            //本地锁成功,远程锁失败,算失败
-            if (local && !remote) {
-                zkLock.unlock();
-            }
-        }
-        return false;
+        return distributeLock.tryLock();
     }
 
     @Override
     public boolean tryLock(long time, TimeUnit unit) throws InterruptedException, DistributeLockException {
-        boolean local = false, remote = false;
-        long start = System.nanoTime();
-        try {
-            if (local = zkLock.tryLock(time, unit)) {
-                long use = System.nanoTime() - start;
-                long need = unit.toNanos(time) - use;
-                while (!sync.tryAcquire()) {
-                    long s = System.nanoTime();
-                    if (!dataChangedCondition.await(need, TimeUnit.NANOSECONDS)) {
-                        return false;
-                    }
-                    need = need - (System.nanoTime() - s);
-                    if (need <= 0) {
-                        return false;
-                    }
-                }
-                return remote = true;
-            }
-        } finally {
-            if (local && !remote) {
-                zkLock.unlock();
-            }
-        }
-        return false;
+        return distributeLock.tryLock(time, unit);
     }
 
     @Override
     public void unlock() throws DistributeLockException {
-        try {
-            sync.tryRelease();
-        } finally {
-            zkLock.unlock();
-        }
+        distributeLock.unlock();
     }
 
     @Override
