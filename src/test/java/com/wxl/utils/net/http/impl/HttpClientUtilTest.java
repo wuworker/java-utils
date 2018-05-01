@@ -1,11 +1,14 @@
 package com.wxl.utils.net.http.impl;
 
-import com.wxl.utils.net.http.HttpMethod;
+import com.wxl.utils.net.http.HttpRequestConfig;
 import com.wxl.utils.net.http.HttpRequested;
 import com.wxl.utils.net.http.HttpResponsed;
 import com.wxl.utils.net.http.HttpUtils;
 import org.junit.Test;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +19,6 @@ import java.util.Map;
  */
 public class HttpClientUtilTest {
 
-
     @Test
     public void doGet() throws Exception {
         HttpUtils httpUtils = HttpClientUtils.custom()
@@ -26,11 +28,9 @@ public class HttpClientUtilTest {
                 .build();
 
         HttpRequested requested = new HttpRequested("http://localhost:8888/simple/all");
-        requested.addParam("name","哈哈");
-        requested.addParam("age","23");
-        requested.setConTimeout(3000);
-        requested.setReadTimeout(3000);
-        HttpResponsed responsed = httpUtils.doGet(requested,false);
+        requested.addQuery("name","哈哈");
+        requested.addQuery("age","23");
+        HttpResponsed responsed = httpUtils.doGet(requested);
 
         System.out.println(responsed.getStringBody("utf-8"));
     }
@@ -39,7 +39,7 @@ public class HttpClientUtilTest {
     public void doHead()throws Exception{
         HttpUtils httpUtils = HttpClientUtils.createDefault();
 
-        Map<String,String> heads = httpUtils.doHead("http://localhost:8888/simple/all");
+        HttpHeaders heads = httpUtils.doHead("http://localhost:8888/simple/all");
 
         System.out.println(heads);
     }
@@ -114,6 +114,16 @@ public class HttpClientUtilTest {
 
         System.out.println(responsed.getStatusLine());
 
+    }
+
+
+    @Test
+    public void doGetHttps() throws IOException {
+        HttpRequested requested = new HttpRequested("https://127.0.0.1:8443");
+        HttpRequestConfig requestConfig = new HttpRequestConfig();
+        requestConfig.setIgnoreSSL(true);
+        HttpResponsed responsed = HttpClientUtils.createDefault().doGet(requested, requestConfig);
+        System.out.println(responsed.getStringBody("utf-8"));
     }
 
 }

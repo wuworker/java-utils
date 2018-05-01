@@ -1,17 +1,24 @@
 package com.wxl.utils.net.http;
 
+import com.wxl.utils.collection.ByteArrayList;
+import lombok.Getter;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
-import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.*;
+
+import static org.springframework.http.HttpMethod.*;
 
 /**
  * Created by wuxingle on 2017/6/23 0023.
@@ -19,80 +26,141 @@ import java.util.*;
  */
 public abstract class HttpUtils {
 
-    //请求的编码
-    protected String requestCharset;
-
-    //连接超时
-    protected int connectTimeout;
-
-    //读取超时
-    protected int readTimeout;
-
-
-    protected HttpUtils(String requestCharset,
-                        int connectTimeout,
-                        int readTimeout) {
-        this.requestCharset = requestCharset;
-        this.connectTimeout = connectTimeout;
-        this.readTimeout = readTimeout;
+    /**
+     * 把参数转为key=value,用&分隔的形式
+     */
+    public static <T> String toQuery(Map<String, T> query, String encode) {
+        if (CollectionUtils.isEmpty(query)) {
+            return "";
+        }
+        StringBuilder queryBuilder = new StringBuilder();
+        try {
+            for (Iterator<Map.Entry<String, T>> it = query.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<String, T> entry = it.next();
+                String key = entry.getKey();
+                T value = entry.getValue();
+                queryBuilder.append(key == null ? "" : URLEncoder.encode(key, encode))
+                        .append("=")
+                        .append(value == null ? "" : URLEncoder.encode(value.toString(), encode));
+                if (it.hasNext()) {
+                    queryBuilder.append("&");
+                }
+            }
+        } catch (UnsupportedEncodingException e) {
+            throw new UnsupportedCharsetException(encode);
+        }
+        return queryBuilder.toString();
     }
 
+    /**
+     * 从key=value,用&分隔的形式解析为map
+     */
+    public static Map<String, String> fromQuery(String query, String encode) {
+        if (!StringUtils.hasText(query)) {
+            return new LinkedHashMap<>();
+        }
+        Map<String, String> map = new LinkedHashMap<>();
+        try {
+            for (String kvs : query.split("&")) {
+                String[] kv = kvs.split("=");
+                if (kv.length == 0) {
+                    continue;
+                }
+                map.put(URLDecoder.decode(kv[0], encode),
+                        kv.length > 1 ? URLDecoder.decode(kv[1], encode) : null);
+            }
+        } catch (UnsupportedEncodingException e) {
+            throw new UnsupportedCharsetException(encode);
+        }
+        return map;
+    }
 
     /**
-     * 执行请求
+     * 从地址中获取请求参数
      */
-    protected abstract HttpResponsed doExecute(HttpRequested request, boolean useLocal) throws IOException;
-
-    /**
-     * 支持的http方法
-     */
-    public abstract List<String> getSupportedMethods();
-
-    /**
-     * 默认参数
-     */
-    protected static class Builder {
-
-        protected String requestCharset = "utf-8";
-
-        //连接超时
-        protected int connectTimeout = 10000;
-
-        //读取超时
-        protected int readTimeout = 10000;
-
-        protected Builder() {
+    public static String getQueryFromURI(String uri) {
+        try {
+            return new URI(uri).getQuery();
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("uri not allowed:" + uri);
         }
     }
 
     /**
+     * 构建url
+     */
+    public static String buildURL(String url, Map<String, String> params, String encode) {
+        String query = toQuery(params, encode);
+        if (!StringUtils.hasText(query)) {
+            return url;
+        }
+        int refIndex;
+        String ref = "", queryUrl = url;
+        if ((refIndex = url.indexOf("#")) >= 0) {
+            ref = url.substring(refIndex, url.length());
+            queryUrl = url.substring(0, refIndex);
+        }
+        return queryUrl + (url.indexOf("?") > 0 ? "&" : "?") + query + ref;
+    }
+
+    /**
+     * 读取输入流转成byte
+     */
+    public static byte[] readBytes(InputStream in) throws IOException {
+        return readBytes(in, 4096);
+    }
+
+    public static byte[] readBytes(InputStream inputStream, int length) throws IOException {
+        if (length < 0) {
+            length = 4096;
+        }
+        ByteArrayList list = ByteArrayList.fromStream(inputStream, length);
+        return list.toByte();
+    }
+
+
+    /**
+     * 请求默认配置
+     */
+    protected HttpRequestConfig requestConfig;
+
+    protected HttpUtils(HttpRequestConfig requestConfig) {
+        if (requestConfig == null) {
+            requestConfig = new HttpRequestConfig();
+        }
+        this.requestConfig = requestConfig;
+    }
+
+    /**
+     * 执行请求
+     */
+    protected abstract HttpResponsed doExecute(HttpRequested request, HttpRequestConfig requestConfig) throws IOException;
+
+    /**
+     * 支持的http方法
+     */
+    public abstract List<HttpMethod> getSupportedMethods();
+
+
+    /**
      * 是否支持这个方法
      */
-    public boolean supportedMethod(String method) {
-        return getSupportedMethods().contains(method.toUpperCase());
+    public boolean supportedMethod(HttpMethod method) {
+        return getSupportedMethods().contains(method);
     }
 
     /**
      * get请求
      *
-     * @param url            url
-     * @param params         参数
-     * @param requestCharset 请求编码
+     * @param url    url
+     * @param params 参数
      * @return 响应
      */
-    public byte[] doGet(String url, Map<String, String> params, String requestCharset) throws IOException {
-        HttpRequested httpRequested = new HttpRequested(url);
-
-        httpRequested.setParams(params);
-
-        setGlobalRequest(httpRequested);
-        httpRequested.setRequestCharset(requestCharset);
-
-        return doGet(httpRequested, true).getBody();
-    }
-
     public byte[] doGet(String url, Map<String, String> params) throws IOException {
-        return doGet(url, params, requestCharset);
+        HttpRequested httpRequested = new HttpRequested(url);
+        httpRequested.setQuery(params);
+
+        return doGet(httpRequested, null).getBody();
     }
 
     public byte[] doGet(String url) throws IOException {
@@ -100,13 +168,13 @@ public abstract class HttpUtils {
     }
 
     public HttpResponsed doGet(HttpRequested request) throws IOException {
-        return doGet(request,false);
+        return doGet(request, null);
     }
 
-    public HttpResponsed doGet(HttpRequested request, boolean useLocal) throws IOException {
-        Assert.notNull(request,"request can not null");
-        request.setMethod(HttpMethod.GET);
-        return execute(request, useLocal);
+    public HttpResponsed doGet(HttpRequested request, HttpRequestConfig requestConfig) throws IOException {
+        Assert.notNull(request, "request can not null");
+        request.setMethod(GET);
+        return execute(request, requestConfig);
     }
 
     /**
@@ -114,25 +182,18 @@ public abstract class HttpUtils {
      *
      * @return 请求头
      */
-    public Map<String, String> doHead(String url) throws IOException {
-        HttpRequested httpRequested = new HttpRequested(url);
-
-        HttpResponsed responsed = doHead(httpRequested, false);
-        Map<String, String> heads = new LinkedHashMap<>();
-        for (HttpHeader httpHeader : responsed.getHeaders()) {
-            heads.put(httpHeader.getName(), httpHeader.getValue());
-        }
-        return heads;
+    public HttpHeaders doHead(String url) throws IOException {
+        return doHead(new HttpRequested(url), null).getHeaders();
     }
 
     public HttpResponsed doHead(HttpRequested request) throws IOException {
-        return doHead(request,false);
+        return doHead(request, null);
     }
 
-    public HttpResponsed doHead(HttpRequested request, boolean useLocal) throws IOException {
-        Assert.notNull(request,"request can not null");
-        request.setMethod(HttpMethod.HEAD);
-        return execute(request, useLocal);
+    public HttpResponsed doHead(HttpRequested request, HttpRequestConfig requestConfig) throws IOException {
+        Assert.notNull(request, "request can not null");
+        request.setMethod(HEAD);
+        return execute(request, requestConfig);
     }
 
 
@@ -147,13 +208,9 @@ public abstract class HttpUtils {
     public byte[] doPost(String url, byte[] body, Map<String, String> heads) throws IOException {
         HttpRequested httpRequested = new HttpRequested(url);
         httpRequested.setBody(body);
-        if (!ObjectUtils.isEmpty(heads)) {
-            for (String key : heads.keySet()) {
-                httpRequested.addHeader(key, heads.get(key));
-            }
-        }
+        httpRequested.addHeader(heads);
 
-        return doPost(httpRequested, false).getBody();
+        return doPost(httpRequested, null).getBody();
     }
 
     public byte[] doPost(String url, byte[] body) throws IOException {
@@ -165,13 +222,13 @@ public abstract class HttpUtils {
     }
 
     public HttpResponsed doPost(HttpRequested request) throws IOException {
-        return doPost(request,false);
+        return doPost(request, null);
     }
 
-    public HttpResponsed doPost(HttpRequested request, boolean useLocal) throws IOException {
-        Assert.notNull(request,"request can not null");
-        request.setMethod(HttpMethod.POST);
-        return execute(request, useLocal);
+    public HttpResponsed doPost(HttpRequested request, HttpRequestConfig requestConfig) throws IOException {
+        Assert.notNull(request, "request can not null");
+        request.setMethod(POST);
+        return execute(request, requestConfig);
     }
 
     /**
@@ -185,13 +242,9 @@ public abstract class HttpUtils {
     public byte[] doPut(String url, byte[] body, Map<String, String> heads) throws IOException {
         HttpRequested httpRequested = new HttpRequested(url);
         httpRequested.setBody(body);
-        if (!ObjectUtils.isEmpty(heads)) {
-            for (String key : heads.keySet()) {
-                httpRequested.addHeader(key, heads.get(key));
-            }
-        }
+        httpRequested.addHeader(heads);
 
-        return doPut(httpRequested, false).getBody();
+        return doPut(httpRequested, null).getBody();
     }
 
     public byte[] doPut(String url, byte[] body) throws IOException {
@@ -199,14 +252,14 @@ public abstract class HttpUtils {
     }
 
     public HttpResponsed doPut(HttpRequested request) throws IOException {
-        return doPut(request,false);
+        return doPut(request, null);
     }
 
-    public HttpResponsed doPut(HttpRequested request, boolean useLocal) throws IOException {
-        Assert.notNull(request,"request can not null");
+    public HttpResponsed doPut(HttpRequested request, HttpRequestConfig requestConfig) throws IOException {
+        Assert.notNull(request, "request can not null");
 
-        request.setMethod(HttpMethod.PUT);
-        return execute(request, useLocal);
+        request.setMethod(PUT);
+        return execute(request, requestConfig);
     }
 
     /**
@@ -220,13 +273,9 @@ public abstract class HttpUtils {
     public byte[] doPatch(String url, byte[] body, Map<String, String> heads) throws IOException {
         HttpRequested httpRequested = new HttpRequested(url);
         httpRequested.setBody(body);
-        if (!ObjectUtils.isEmpty(heads)) {
-            for (String key : heads.keySet()) {
-                httpRequested.addHeader(key, heads.get(key));
-            }
-        }
+        httpRequested.addHeader(heads);
 
-        return doPatch(httpRequested, false).getBody();
+        return doPatch(httpRequested, null).getBody();
     }
 
     public byte[] doPatch(String url, byte[] body) throws IOException {
@@ -234,14 +283,14 @@ public abstract class HttpUtils {
     }
 
     public HttpResponsed doPatch(HttpRequested request) throws IOException {
-        return doPatch(request,false);
+        return doPatch(request, null);
     }
 
-    public HttpResponsed doPatch(HttpRequested request, boolean useLocal) throws IOException {
-        Assert.notNull(request,"request can not null");
+    public HttpResponsed doPatch(HttpRequested request, HttpRequestConfig requestConfig) throws IOException {
+        Assert.notNull(request, "request can not null");
 
-        request.setMethod(HttpMethod.PATCH);
-        return execute(request, useLocal);
+        request.setMethod(PATCH);
+        return execute(request, requestConfig);
     }
 
     /**
@@ -249,18 +298,18 @@ public abstract class HttpUtils {
      */
     public byte[] doDelete(String url) throws IOException {
         HttpRequested httpRequested = new HttpRequested(url);
-        return doDelete(httpRequested, true).getBody();
+        return doDelete(httpRequested, null).getBody();
     }
 
     public HttpResponsed doDelete(HttpRequested request) throws IOException {
-        return doDelete(request,false);
+        return doDelete(request, null);
     }
 
-    public HttpResponsed doDelete(HttpRequested request, boolean useLocal) throws IOException {
-        Assert.notNull(request,"request can not null");
+    public HttpResponsed doDelete(HttpRequested request, HttpRequestConfig requestConfig) throws IOException {
+        Assert.notNull(request, "request can not null");
 
-        request.setMethod(HttpMethod.DELETE);
-        return execute(request, useLocal);
+        request.setMethod(DELETE);
+        return execute(request, requestConfig);
     }
 
 
@@ -271,132 +320,53 @@ public abstract class HttpUtils {
      */
     public List<String> doOptions(String url) throws IOException {
         HttpRequested httpRequested = new HttpRequested(url);
-        HttpResponsed responsed = doOptions(httpRequested, false);
-        for (HttpHeader httpHeader : responsed.getHeaders()) {
-            if ("Allow".equalsIgnoreCase(httpHeader.getName())) {
-                String methods = httpHeader.getValue();
-                return Arrays.asList(methods.trim().split(","));
-            }
-        }
-        return new ArrayList<>();
+        HttpResponsed responsed = doOptions(httpRequested, null);
+        List<String> allow = responsed.getHeaders().get("Allow");
+        return allow == null ? Collections.EMPTY_LIST : allow;
     }
 
     public HttpResponsed doOptions(HttpRequested request) throws IOException {
-        return doOptions(request,false);
+        return doOptions(request, null);
     }
 
-    public HttpResponsed doOptions(HttpRequested request, boolean useLocal) throws IOException {
-        Assert.notNull(request,"request can not null");
+    public HttpResponsed doOptions(HttpRequested request, HttpRequestConfig requestConfig) throws IOException {
+        Assert.notNull(request, "request can not null");
 
-        request.setMethod(HttpMethod.OPTIONS);
-        return execute(request, useLocal);
+        request.setMethod(OPTIONS);
+        return execute(request, requestConfig);
     }
 
 
     /**
      * 执行请求
      */
-    public HttpResponsed execute(HttpRequested request, boolean useLocal) throws IOException {
-        Assert.notNull(request,"request can not null");
-        Assert.hasLength(request.getUrl(),"request url can not null");
-        Assert.isTrue(supportedMethod(request.getMethod()),"request method unsupported: " + request.getMethod());
+    public HttpResponsed execute(HttpRequested request, HttpRequestConfig requestConfig) throws IOException {
+        Assert.notNull(request, "request can not null");
+        Assert.hasLength(request.getUrl(), "request url can not null");
+        Assert.isTrue(supportedMethod(request.getMethod()), "request method unsupported: " + request.getMethod());
 
-        return doExecute(request, useLocal);
+        return doExecute(request, requestConfig);
     }
 
     public HttpResponsed execute(HttpRequested request) throws IOException {
-        return execute(request, false);
+        return execute(request, null);
     }
 
-
-    /**
-     * 把参数转为key=value,用&分隔的形式
-     */
-    public static String turnParamsString(Map<String, String> params, String reqCode) {
-        if (!CollectionUtils.isEmpty(params)) {
-            return "";
-        }
-        StringBuilder reqParams = new StringBuilder();
-        try {
-            for (Map.Entry<String,String> entry : params.entrySet()) {
-                String key = entry.getKey();
-                String value = entry.getValue();
-                if(!StringUtils.hasText(key)){
-                    continue;
-                }
-                reqParams.append(URLEncoder.encode(key, reqCode))
-                        .append("=")
-                        .append(StringUtils.isEmpty(value) ? value : URLEncoder.encode(params.get(key), reqCode))
-                        .append("&");
-            }
-        } catch (UnsupportedEncodingException e) {
-            throw new UnsupportedCharsetException(reqCode);
-        }
-
-        return reqParams.length() > 0 ? reqParams.substring(0, reqParams.length() - 1) : "";
-    }
-
-    /**
-     * 构建get形式的url
-     */
-    public static String buildGetUrl(String url, Map<String, String> params, String reqCode) {
-        StringBuilder reqParams = new StringBuilder(url);
-        if (!ObjectUtils.isEmpty(params)) {
-            reqParams.append("?").append(turnParamsString(params, reqCode));
-        }
-        return reqParams.toString();
-    }
-
-
-    /**
-     * 读取输入流转成byte
-     */
-    public static byte[] readBytes(InputStream in) throws IOException {
-        return readBytes(in, 4096);
-    }
-
-    public static byte[] readBytes(InputStream inputStream, int length) throws IOException {
-        if (length < 0) {
-            length = 4096;
-        }
-        byte[] data = new byte[length];
-        int offset = 0;
-        int len;
-        try (BufferedInputStream in = new BufferedInputStream(inputStream)) {
-            if (data.length == 0) {
-                return data;
-            }
-            while ((len = in.read(data, offset, data.length - offset)) != -1) {
-                offset += len;
-                if (offset == data.length) {
-                    byte[] tmp = new byte[data.length * 3 / 2];
-                    System.arraycopy(data, 0, tmp, 0, data.length);
-                    data = tmp;
-                }
-            }
-        }
-        return Arrays.copyOf(data, offset);
-    }
-
-    /**
-     * 设置全局参数
-     */
-    protected void setGlobalRequest(HttpRequested request) {
-        request.setReadTimeout(readTimeout);
-        request.setConTimeout(connectTimeout);
-        request.setRequestCharset(requestCharset);
-    }
 
     public String getRequestCharset() {
-        return requestCharset;
+        return requestConfig.getRequestCharset();
     }
 
     public int getConnectTimeout() {
-        return connectTimeout;
+        return requestConfig.getConnectTimeout();
     }
 
     public int getReadTimeout() {
-        return readTimeout;
+        return requestConfig.getReadTimeout();
+    }
+
+    public boolean ignoreSSL() {
+        return requestConfig.isIgnoreSSL();
     }
 }
 

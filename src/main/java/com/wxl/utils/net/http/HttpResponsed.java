@@ -1,5 +1,8 @@
 package com.wxl.utils.net.http;
 
+import lombok.Getter;
+import lombok.Setter;
+import org.springframework.http.HttpHeaders;
 import org.springframework.util.StringUtils;
 
 import java.nio.charset.Charset;
@@ -10,6 +13,8 @@ import java.util.List;
  * Created by wuxingle on 2017/7/14 0014.
  * http响应
  */
+@Setter
+@Getter
 public class HttpResponsed {
 
     //状态
@@ -22,61 +27,28 @@ public class HttpResponsed {
     private byte[] body;
 
     //响应头
-    private List<HttpHeader> headers = new ArrayList<>();
+    private HttpHeaders headers = new HttpHeaders();
 
     public HttpResponsed() {
     }
 
-    public HttpResponsed addHeader(String name, String value){
-        headers.add(new HttpHeader(name,value));
+    public HttpResponsed addHeader(String name, String value) {
+        headers.add(name, value);
         return this;
     }
 
-    public HttpResponsed addHeader(String name, List<String> values){
-        if(values.isEmpty()){
-            return this;
+    public HttpResponsed addHeader(String name, List<String> values) {
+        for (String v : values) {
+            headers.add(name, v);
         }
-        StringBuilder sb = new StringBuilder();
-        for (String value:values){
-            sb.append(value).append(",");
-        }
-        headers.add(new HttpHeader(name,sb.substring(0,sb.length() - 1)));
         return this;
     }
 
-    public void setStatusLine(String statusLine) {
-        this.statusLine = statusLine;
-    }
-
-    public void setStatusCode(int statusCode) {
-        this.statusCode = statusCode;
-    }
-
-    public String getStatusLine() {
-        return statusLine;
-    }
-
-    public int getStatusCode() {
-        return statusCode;
-    }
-
-    public String getStringBody(String code){
-        if(!StringUtils.isEmpty(body)){
+    public String getStringBody(String code) {
+        if (!StringUtils.isEmpty(body)) {
             return new String(body, Charset.forName(code));
         }
         return null;
-    }
-
-    public List<HttpHeader> getHeaders() {
-        return new ArrayList<>(headers);
-    }
-
-    public byte[] getBody() {
-        return body;
-    }
-
-    public void setBody(byte[] body) {
-        this.body = body;
     }
 
 }

@@ -2,6 +2,8 @@ package com.wxl.utils.collection;
 
 import com.wxl.utils.annotation.UnThreadSafe;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.util.*;
 import java.util.function.Consumer;
@@ -38,6 +40,29 @@ public class ByteArrayList implements Iterable<Byte>, Serializable, Cloneable {
         array = new byte[len];
         System.arraycopy(data, start, array, 0, len);
         size = len;
+    }
+
+    /**
+     * 从输入流中获取
+     */
+    public static ByteArrayList fromStream(InputStream in) throws IOException {
+        return fromStream(in, DEFAULT_INIT_SIZE);
+    }
+
+    public static ByteArrayList fromStream(InputStream in, int initSize) throws IOException {
+        ByteArrayList list = new ByteArrayList(initSize);
+        byte[] tmp = new byte[initSize];
+        try {
+            int l;
+            while ((l = in.read(tmp)) != -1) {
+                list.addAll(tmp, 0, l);
+            }
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+        }
+        return list;
     }
 
     /**

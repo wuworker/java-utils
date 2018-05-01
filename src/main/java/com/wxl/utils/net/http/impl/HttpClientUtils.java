@@ -2,16 +2,23 @@ package com.wxl.utils.net.http.impl;
 
 
 import com.wxl.utils.annotation.ThreadSafe;
-import com.wxl.utils.net.http.HttpHeader;
+import com.wxl.utils.net.http.HttpRequestConfig;
 import com.wxl.utils.net.http.HttpRequested;
 import com.wxl.utils.net.http.HttpResponsed;
 import com.wxl.utils.net.http.HttpUtils;
+import com.wxl.utils.net.ssl.SSLUtils;
+import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.ByteArrayEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.DefaultConnectionKeepAliveStrategy;
@@ -19,12 +26,18 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.util.EntityUtils;
+import org.springframework.http.HttpMethod;
+import org.springframework.util.StringUtils;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
-import static com.wxl.utils.net.http.HttpMethod.*;
+import static org.springframework.http.HttpMethod.*;
+
 
 /**
  * Created by wuxingle on 2017/7/15 0015.
@@ -34,62 +47,64 @@ import static com.wxl.utils.net.http.HttpMethod.*;
 @ThreadSafe
 public class HttpClientUtils extends HttpUtils {
 
+    //http支持方法
+    private static List<HttpMethod> supportMethods = Arrays.asList(
+            GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS, TRACE);
+
+
+    @Getter
+    @Setter
+    @EqualsAndHashCode(callSuper = true)
+    @ToString(callSuper = true)
+    private static class HttpClientConfig extends HttpRequestConfig {
+        //从连接池获取连接超时时间
+        private int conRequestTimeout = 5000;
+        //最大线程数
+        private int maxThread = 20;
+        //对相同host请求的最大线程数
+        private int maxRouteThread = 5;
+        //keepAlive(毫秒)
+        //优先用服务器发送的keepAlive时间
+        private int defaultKeepAlive = 30000;
+
+        @Override
+        public HttpClientConfig clone() {
+            return (HttpClientConfig) super.clone();
+        }
+    }
+
     private CloseableHttpClient httpClient;
 
-    //从连接池获取连接超时时间
-    private int conRequestTimeout;
-
-    //最大线程数
-    private int maxThread;
-
-    //对相同host请求的最大线程数
-    private int maxRouteThread;
-
-    //keepAlive(毫秒)
-    //优先用服务器发送的keepAlive时间
-    private int defaultKeepAlive;
-
-    //http支持方法
-    private static String[] supportMethods = {
-            GET, HEAD, POST, PUT, PATCH,DELETE, OPTIONS, TRACE
-    };
-
-
-    private HttpClientUtils(
-            String requestCharset,
-            int connectTimeout,
-            int readTimeout,
-            int conRequestTimeout,
-            int maxThread,
-            int maxRouteThread,
-            int defaultKeepAlive) {
-        super(requestCharset, connectTimeout, readTimeout);
-        this.conRequestTimeout = conRequestTimeout;
-        this.maxThread = maxThread;
-        this.maxRouteThread = maxRouteThread;
-        this.defaultKeepAlive = defaultKeepAlive;
+    private HttpClientUtils(HttpClientConfig clientConfig) {
+        super(clientConfig);
 
         //请求配置
-        RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectionRequestTimeout(conRequestTimeout)
-                .setConnectTimeout(connectTimeout)
-                .setSocketTimeout(readTimeout)
+        RequestConfig rc = RequestConfig.custom()
+                .setConnectionRequestTimeout(clientConfig.getConRequestTimeout())
+                .setConnectTimeout(requestConfig.getConnectTimeout())
+                .setSocketTimeout(requestConfig.getReadTimeout())
                 .build();
         //连接池配置
-        PoolingHttpClientConnectionManager connectionManager =
-                new PoolingHttpClientConnectionManager();
-        connectionManager.setDefaultMaxPerRoute(maxRouteThread);
-        connectionManager.setMaxTotal(maxThread);
+        Registry<ConnectionSocketFactory> registry = RegistryBuilder.<ConnectionSocketFactory>create()
+                .register("http", PlainConnectionSocketFactory.getSocketFactory())
+                .register("https", SSLConnectionSocketFactory.getSocketFactory())
+                //不验证ssl
+                .register("ihttps", new SSLConnectionSocketFactory(SSLUtils.getTrustAnySSLContext("TLS"), (o1, o2) -> true))
+                .build();
 
+        PoolingHttpClientConnectionManager connectionManager =
+                new PoolingHttpClientConnectionManager(registry);
+        connectionManager.setDefaultMaxPerRoute(clientConfig.getMaxRouteThread());
+        connectionManager.setMaxTotal(clientConfig.getMaxThread());
         httpClient = HttpClients.custom()
                 .setConnectionManager(connectionManager)
-                .setDefaultRequestConfig(requestConfig)
+                .setDefaultRequestConfig(rc)
                 .setKeepAliveStrategy(new DefaultConnectionKeepAliveStrategy() {
                     @Override
                     public long getKeepAliveDuration(HttpResponse response, HttpContext context) {
                         long keepAlive = super.getKeepAliveDuration(response, context);
                         if (keepAlive == -1) {
-                            keepAlive = defaultKeepAlive;
+                            keepAlive = clientConfig.getDefaultKeepAlive();
                         }
                         return keepAlive;
                     }
@@ -115,8 +130,8 @@ public class HttpClientUtils extends HttpUtils {
      * 执行请求
      */
     @Override
-    protected HttpResponsed doExecute(HttpRequested request, boolean useLocal) throws IOException {
-        HttpRequestBase requestBase = getHttpRequestBase(request, useLocal);
+    protected HttpResponsed doExecute(HttpRequested request, HttpRequestConfig requestConfig) throws IOException {
+        HttpRequestBase requestBase = getHttpRequestBase(request, requestConfig);
 
         HttpResponsed httpResponsed = new HttpResponsed();
         try (CloseableHttpResponse response = httpClient.execute(requestBase)) {
@@ -148,18 +163,23 @@ public class HttpClientUtils extends HttpUtils {
      * 所有支持的http方法
      */
     @Override
-    public List<String> getSupportedMethods() {
-        return Arrays.asList(supportMethods);
+    public List<HttpMethod> getSupportedMethods() {
+        return supportMethods;
     }
 
     /**
      * 获取相应的请求
      */
-    private HttpRequestBase getHttpRequestBase(HttpRequested request, boolean useLocal) {
-        HttpRequestBase requestBase = null;
-        String url = buildGetUrl(request.getUrl(), request.getAllParam(),
-                useLocal ? request.getRequestCharset() : requestCharset);
-        switch (request.getMethod().toUpperCase()) {
+    private HttpRequestBase getHttpRequestBase(HttpRequested request, HttpRequestConfig requestConfig) {
+        HttpRequestBase requestBase;
+        String url = buildURL(request.getUrl(), request.getQuery(), requestConfig == null ?
+                this.requestConfig.getRequestCharset() : requestConfig.getRequestCharset());
+        //忽略ssl验证
+        if ((requestConfig == null ? this.requestConfig.isIgnoreSSL() : requestConfig.isIgnoreSSL())
+                && url.startsWith("https")) {
+            url = "i" + url;
+        }
+        switch (request.getMethod()) {
             case GET:
                 requestBase = new HttpGet(url);
                 break;
@@ -195,18 +215,18 @@ public class HttpClientUtils extends HttpUtils {
         }
 
         //使用本地配置
-        if (useLocal) {
-            RequestConfig requestConfig = RequestConfig.custom()
-                    .setSocketTimeout(request.getReadTimeout())
-                    .setConnectTimeout(request.getConTimeout())
+        if (requestConfig != null) {
+            RequestConfig rc = RequestConfig.custom()
+                    .setSocketTimeout(requestConfig.getReadTimeout())
+                    .setConnectTimeout(requestConfig.getConnectTimeout())
                     .build();
-            requestBase.setConfig(requestConfig);
+            requestBase.setConfig(rc);
         }
         //设置请求头
-        for (HttpHeader header : request.getAllHeader()) {
-            requestBase.setHeader(header.getName(), header.getValue());
+        for (Map.Entry<String, List<String>> entry : request.getHeaders().entrySet()) {
+            requestBase.setHeader(entry.getKey(),
+                    StringUtils.collectionToDelimitedString(entry.getValue(), ";"));
         }
-
         return requestBase;
     }
 
@@ -224,82 +244,72 @@ public class HttpClientUtils extends HttpUtils {
     /**
      * httpClient的一些配置
      */
-    public static class Builder extends HttpUtils.Builder {
-        //从连接池获取连接超时时间
-        private int conRequestTimeout = 10000;
-        //最大线程数
-        private int maxThread = 50;
-        //对相同host请求的最大线程数
-        private int maxRouteThread = 20;
-        //keepAlive(毫秒)
-        //优先用服务器发送的keepAlive时间
-        private int defaultKeepAlive = 10 * 1000;
+    public static class Builder {
+        private HttpClientConfig clientConfig;
 
         private Builder() {
+            clientConfig = new HttpClientConfig();
         }
 
         public HttpClientUtils build() {
-            return new HttpClientUtils(
-                    requestCharset,
-                    connectTimeout,
-                    readTimeout,
-                    conRequestTimeout,
-                    maxThread,
-                    maxRouteThread,
-                    defaultKeepAlive
-            );
+            return new HttpClientUtils(clientConfig.clone());
         }
 
         public Builder setRequestCharset(String requestCharset) {
-            this.requestCharset = requestCharset;
+            clientConfig.setRequestCharset(requestCharset);
             return this;
         }
 
         public Builder setConnectTimeout(int connectTimeout) {
-            this.connectTimeout = connectTimeout;
+            clientConfig.setConnectTimeout(connectTimeout);
             return this;
         }
 
         public Builder setReadTimeout(int readTimeout) {
-            this.readTimeout = readTimeout;
+            clientConfig.setReadTimeout(readTimeout);
+            return this;
+        }
+
+        public Builder setIgnoreSSL(boolean ignore) {
+            clientConfig.setIgnoreSSL(ignore);
             return this;
         }
 
         public Builder setConRequestTimeout(int conRequestTimeout) {
-            this.conRequestTimeout = conRequestTimeout;
+            clientConfig.setConRequestTimeout(conRequestTimeout);
             return this;
         }
 
         public Builder setMaxThread(int maxThread) {
-            this.maxThread = maxThread;
+            clientConfig.setMaxThread(maxThread);
             return this;
         }
 
         public Builder setMaxRouteThread(int maxRouteThread) {
-            this.maxRouteThread = maxRouteThread;
+            clientConfig.setMaxRouteThread(maxRouteThread);
             return this;
         }
 
         public Builder setDefaultKeepAlive(int defaultKeepAlive) {
-            this.defaultKeepAlive = defaultKeepAlive;
+            clientConfig.setDefaultKeepAlive(defaultKeepAlive);
             return this;
         }
     }
 
     public int getConRequestTimeout() {
-        return conRequestTimeout;
+        return ((HttpClientConfig) requestConfig).getConRequestTimeout();
     }
 
     public int getMaxThread() {
-        return maxThread;
+        return ((HttpClientConfig) requestConfig).getMaxThread();
     }
 
     public int getMaxRouteThread() {
-        return maxRouteThread;
+        return ((HttpClientConfig) requestConfig).getMaxRouteThread();
     }
 
     public int getDefaultKeepAlive() {
-        return defaultKeepAlive;
+        return ((HttpClientConfig) requestConfig).getDefaultKeepAlive();
     }
 
 

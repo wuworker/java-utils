@@ -1,6 +1,7 @@
 package com.wxl.utils;
 
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 
 import java.util.*;
 
@@ -12,11 +13,12 @@ public class ListMapUtils {
 
     /**
      * 对list分页
-     * @param pageNo 第几页
+     *
+     * @param pageNo   第几页
      * @param pageSize 一页几个
      */
     public static <T> List<T> pageOfList(List<T> list, int pageNo, int pageSize) {
-        Assert.notNull(list,"list can not null");
+        Assert.notNull(list, "list can not null");
         Assert.isTrue(pageNo > 0 && pageSize > 0, "pageNo and pageSize must > 0");
         if (list.isEmpty()) {
             return new ArrayList<>();
@@ -62,13 +64,28 @@ public class ListMapUtils {
      * 根据value拿key，拿第一个
      */
     public static <K, V> K getKeyByValue(Map<K, V> map, V value) {
-        for(Map.Entry<K,V> entry:map.entrySet()){
-            if(Objects.equals(entry.getValue(),value)){
+        for (Map.Entry<K, V> entry : map.entrySet()) {
+            if (Objects.equals(entry.getValue(), value)) {
                 return entry.getKey();
             }
         }
         return null;
     }
+
+    /**
+     * 合并2个map,转为hashMap
+     */
+    public static <K, V> Map<K, V> mergeToHash(Map<K, V> map1, Map<K, V> map2) {
+        Map<K, V> map = new HashMap<>();
+        if (!CollectionUtils.isEmpty(map1)) {
+            map.putAll(map1);
+        }
+        if (!CollectionUtils.isEmpty(map2)) {
+            map.putAll(map2);
+        }
+        return map;
+    }
+
 
 }
 

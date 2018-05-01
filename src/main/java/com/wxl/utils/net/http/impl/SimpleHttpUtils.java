@@ -1,13 +1,18 @@
 package com.wxl.utils.net.http.impl;
 
 import com.wxl.utils.annotation.ThreadSafe;
-import com.wxl.utils.net.http.HttpHeader;
+import com.wxl.utils.net.http.HttpRequestConfig;
 import com.wxl.utils.net.http.HttpRequested;
 import com.wxl.utils.net.http.HttpResponsed;
 import com.wxl.utils.net.http.HttpUtils;
+import com.wxl.utils.net.ssl.SSLUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 
+import javax.net.ssl.*;
 import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -16,7 +21,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static com.wxl.utils.net.http.HttpMethod.*;
+import static org.springframework.http.HttpMethod.*;
+
 
 /**
  * Created by wuxingle on 2017/7/14 0014.
@@ -28,15 +34,15 @@ import static com.wxl.utils.net.http.HttpMethod.*;
 public class SimpleHttpUtils extends HttpUtils {
 
     //http支持方法
-    private static String[] supportMethods = {
-            GET, HEAD, POST, PUT, DELETE, OPTIONS, TRACE
-    };
+    private static List<HttpMethod> supportMethods = Arrays.asList(
+            GET, HEAD, POST, PUT, DELETE, OPTIONS, TRACE);
 
-    private SimpleHttpUtils(
-            String requestCharset,
-            int connectTimeout,
-            int readTimeout) {
-        super(requestCharset, connectTimeout, readTimeout);
+    private SSLSocketFactory ignoreSSLSocketFactory;
+
+    private HostnameVerifier verifier;
+
+    private SimpleHttpUtils(HttpRequestConfig requestConfig) {
+        super(requestConfig);
     }
 
     /**
@@ -58,49 +64,56 @@ public class SimpleHttpUtils extends HttpUtils {
      * 支持的请求方法
      */
     @Override
-    public List<String> getSupportedMethods() {
-        return Arrays.asList(supportMethods);
+    public List<HttpMethod> getSupportedMethods() {
+        return supportMethods;
     }
 
     /**
      * 执行请求
      */
     @Override
-    protected HttpResponsed doExecute(HttpRequested request, boolean useLocal) throws IOException {
+    protected HttpResponsed doExecute(HttpRequested request, HttpRequestConfig requestConfig) throws IOException {
         if (request.getMethod() == null) {
             throw new IllegalArgumentException("request method can not null");
         }
-        //使用全局配置
-        if (!useLocal) {
-            setGlobalRequest(request);
+        if (requestConfig == null) {
+            requestConfig = this.requestConfig;
         }
         //请求方法
-        String method = request.getMethod().toUpperCase();
+        String method = request.getMethod().name();
         //请求url
-        URL reqUrl = new URL(buildGetUrl(request.getUrl(), request.getAllParam(), request.getRequestCharset()));
-        log.debug("send requestBean url :{}", reqUrl.toString());
+        URL reqUrl = new URL(buildURL(request.getUrl(), request.getQuery(), requestConfig.getRequestCharset()));
+        log.debug("send request url :{}", reqUrl.toString());
 
         HttpURLConnection urlConnection = (HttpURLConnection) reqUrl.openConnection();
         urlConnection.setDoInput(true);
-        if (supportedSendBody(method)) {
+        if (!ObjectUtils.isEmpty(request.getBody())) {
             urlConnection.setDoOutput(true);
         }
 
         urlConnection.setRequestMethod(method);
-        if (request.getConTimeout() > 0) {
-            urlConnection.setConnectTimeout(request.getConTimeout());
+        if (requestConfig.getConnectTimeout() > 0) {
+            urlConnection.setConnectTimeout(requestConfig.getConnectTimeout());
         }
-        if (request.getReadTimeout() > 0) {
-            urlConnection.setReadTimeout(request.getReadTimeout());
+        if (requestConfig.getReadTimeout() > 0) {
+            urlConnection.setReadTimeout(requestConfig.getReadTimeout());
         }
-        for (HttpHeader header : request.getAllHeader()) {
-            urlConnection.setRequestProperty(header.getName(), header.getValue());
+        HttpHeaders httpHeaders = request.getHeaders();
+        for (Map.Entry<String, List<String>> entry : httpHeaders.entrySet()) {
+            urlConnection.setRequestProperty(entry.getKey(),
+                    StringUtils.collectionToDelimitedString(entry.getValue(), ";"));
+        }
+
+        //忽略ssl
+        if (requestConfig.isIgnoreSSL() && urlConnection instanceof HttpsURLConnection) {
+            ((HttpsURLConnection) urlConnection).setSSLSocketFactory(getIgnoreSSLSocketFactory());
+            ((HttpsURLConnection) urlConnection).setHostnameVerifier(getHostnameVerifier());
         }
 
         urlConnection.connect();
 
         //支持的方法发送请求体
-        if (supportedSendBody(method) && !ObjectUtils.isEmpty(request.getBody())) {
+        if (!ObjectUtils.isEmpty(request.getBody())) {
             //发送body
             byte[] body = request.getBody();
             try (BufferedOutputStream out = new BufferedOutputStream(
@@ -139,37 +152,64 @@ public class SimpleHttpUtils extends HttpUtils {
     }
 
 
+    private SSLSocketFactory getIgnoreSSLSocketFactory() {
+        if (ignoreSSLSocketFactory == null) {
+            synchronized (this) {
+                if (ignoreSSLSocketFactory == null) {
+                    SSLContext sslContext = SSLUtils.getTrustAnySSLContext("TLS");
+                    ignoreSSLSocketFactory = sslContext.getSocketFactory();
+                }
+            }
+        }
+        return ignoreSSLSocketFactory;
+    }
+
+    private HostnameVerifier getHostnameVerifier() {
+        if (verifier == null) {
+            synchronized (this) {
+                if (verifier == null) {
+                    verifier = (o1, o2) -> true;
+                }
+            }
+        }
+        return verifier;
+    }
+
+
     /**
      * http的一些简单配置
      */
-    public static class Builder extends HttpUtils.Builder {
+    public static class Builder {
+
+        private HttpRequestConfig requestConfig;
 
         private Builder() {
+            requestConfig = new HttpRequestConfig();
         }
 
         public SimpleHttpUtils build() {
-            return new SimpleHttpUtils(
-                    requestCharset,
-                    connectTimeout,
-                    readTimeout
-            );
+            return new SimpleHttpUtils(requestConfig.clone());
         }
 
         public Builder setRequestCharset(String requestCharset) {
-            this.requestCharset = requestCharset;
+            requestConfig.setRequestCharset(requestCharset);
             return this;
         }
 
         public Builder setConnectTimeout(int connectTimeout) {
-            this.connectTimeout = connectTimeout;
+            requestConfig.setConnectTimeout(connectTimeout);
             return this;
         }
 
         public Builder setReadTimeout(int readTimeout) {
-            this.readTimeout = readTimeout;
+            requestConfig.setReadTimeout(readTimeout);
             return this;
         }
 
+        public Builder setIgnoreSSL(boolean ignore) {
+            requestConfig.setIgnoreSSL(ignore);
+            return this;
+        }
     }
 
 
