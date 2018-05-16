@@ -1,7 +1,6 @@
 package com.wxl.utils.net.http;
 
 import com.wxl.utils.collection.ByteArrayList;
-import lombok.Getter;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.util.Assert;
@@ -29,17 +28,17 @@ public abstract class HttpUtils {
     /**
      * 把参数转为key=value,用&分隔的形式
      */
-    public static <T> String toQuery(Map<String, T> query, String encode) {
+    public static <K,V> String toQuery(Map<K, V> query, String encode) {
         if (CollectionUtils.isEmpty(query)) {
             return "";
         }
         StringBuilder queryBuilder = new StringBuilder();
         try {
-            for (Iterator<Map.Entry<String, T>> it = query.entrySet().iterator(); it.hasNext(); ) {
-                Map.Entry<String, T> entry = it.next();
-                String key = entry.getKey();
-                T value = entry.getValue();
-                queryBuilder.append(key == null ? "" : URLEncoder.encode(key, encode))
+            for (Iterator<Map.Entry<K, V>> it = query.entrySet().iterator(); it.hasNext(); ) {
+                Map.Entry<K, V> entry = it.next();
+                K key = entry.getKey();
+                V value = entry.getValue();
+                queryBuilder.append(key == null ? "" : URLEncoder.encode(key.toString(), encode))
                         .append("=")
                         .append(value == null ? "" : URLEncoder.encode(value.toString(), encode));
                 if (it.hasNext()) {
@@ -82,7 +81,7 @@ public abstract class HttpUtils {
         try {
             return new URI(uri).getQuery();
         } catch (URISyntaxException e) {
-            throw new IllegalArgumentException("uri not allowed:" + uri);
+            throw new IllegalArgumentException("uri is illegal:" + uri);
         }
     }
 
@@ -129,6 +128,45 @@ public abstract class HttpUtils {
             requestConfig = new HttpRequestConfig();
         }
         this.requestConfig = requestConfig;
+    }
+
+    /**
+     * httpBuilder
+     */
+    public static abstract class Builder<T extends Builder> {
+
+        protected HttpRequestConfig requestConfig;
+
+        protected Builder() {
+            requestConfig = new HttpRequestConfig();
+        }
+
+        public abstract HttpUtils build();
+
+        public T setRequestCharset(String requestCharset) {
+            requestConfig.setRequestCharset(requestCharset);
+            return self();
+        }
+
+        public T setConnectTimeout(int connectTimeout) {
+            requestConfig.setConnectTimeout(connectTimeout);
+            return self();
+        }
+
+        public T setReadTimeout(int readTimeout) {
+            requestConfig.setReadTimeout(readTimeout);
+            return self();
+        }
+
+        public T setIgnoreSSL(boolean ignore) {
+            requestConfig.setIgnoreSSL(ignore);
+            return self();
+        }
+
+        @SuppressWarnings("unchecked")
+        private T self() {
+            return (T) this;
+        }
     }
 
     /**
@@ -352,21 +390,5 @@ public abstract class HttpUtils {
         return execute(request, null);
     }
 
-
-    public String getRequestCharset() {
-        return requestConfig.getRequestCharset();
-    }
-
-    public int getConnectTimeout() {
-        return requestConfig.getConnectTimeout();
-    }
-
-    public int getReadTimeout() {
-        return requestConfig.getReadTimeout();
-    }
-
-    public boolean ignoreSSL() {
-        return requestConfig.isIgnoreSSL();
-    }
 }
 

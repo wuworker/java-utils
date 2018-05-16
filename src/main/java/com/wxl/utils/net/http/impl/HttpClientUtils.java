@@ -7,7 +7,6 @@ import com.wxl.utils.net.http.HttpRequested;
 import com.wxl.utils.net.http.HttpResponsed;
 import com.wxl.utils.net.http.HttpUtils;
 import com.wxl.utils.net.ssl.SSLUtils;
-import lombok.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
@@ -29,8 +28,6 @@ import org.apache.http.util.EntityUtils;
 import org.springframework.http.HttpMethod;
 import org.springframework.util.StringUtils;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -52,35 +49,18 @@ public class HttpClientUtils extends HttpUtils {
             GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS, TRACE);
 
 
-    @Getter
-    @Setter
-    @EqualsAndHashCode(callSuper = true)
-    @ToString(callSuper = true)
-    private static class HttpClientConfig extends HttpRequestConfig {
-        //从连接池获取连接超时时间
-        private int conRequestTimeout = 5000;
-        //最大线程数
-        private int maxThread = 20;
-        //对相同host请求的最大线程数
-        private int maxRouteThread = 5;
-        //keepAlive(毫秒)
-        //优先用服务器发送的keepAlive时间
-        private int defaultKeepAlive = 30000;
-
-        @Override
-        public HttpClientConfig clone() {
-            return (HttpClientConfig) super.clone();
-        }
-    }
-
     private CloseableHttpClient httpClient;
 
-    private HttpClientUtils(HttpClientConfig clientConfig) {
-        super(clientConfig);
+    private HttpClientUtils(HttpRequestConfig requestConfig,
+                            int conRequestTimeout,
+                            int maxThread,
+                            int maxRouteThread,
+                            int defaultKeepAlive) {
+        super(requestConfig);
 
         //请求配置
         RequestConfig rc = RequestConfig.custom()
-                .setConnectionRequestTimeout(clientConfig.getConRequestTimeout())
+                .setConnectionRequestTimeout(conRequestTimeout)
                 .setConnectTimeout(requestConfig.getConnectTimeout())
                 .setSocketTimeout(requestConfig.getReadTimeout())
                 .build();
@@ -94,8 +74,8 @@ public class HttpClientUtils extends HttpUtils {
 
         PoolingHttpClientConnectionManager connectionManager =
                 new PoolingHttpClientConnectionManager(registry);
-        connectionManager.setDefaultMaxPerRoute(clientConfig.getMaxRouteThread());
-        connectionManager.setMaxTotal(clientConfig.getMaxThread());
+        connectionManager.setDefaultMaxPerRoute(maxRouteThread);
+        connectionManager.setMaxTotal(maxThread);
         httpClient = HttpClients.custom()
                 .setConnectionManager(connectionManager)
                 .setDefaultRequestConfig(rc)
@@ -104,7 +84,7 @@ public class HttpClientUtils extends HttpUtils {
                     public long getKeepAliveDuration(HttpResponse response, HttpContext context) {
                         long keepAlive = super.getKeepAliveDuration(response, context);
                         if (keepAlive == -1) {
-                            keepAlive = clientConfig.getDefaultKeepAlive();
+                            keepAlive = defaultKeepAlive;
                         }
                         return keepAlive;
                     }
@@ -115,14 +95,14 @@ public class HttpClientUtils extends HttpUtils {
      * 获取默认实例
      */
     public static HttpClientUtils createDefault() {
-        return new Builder().build();
+        return new PoolBuilder().build();
     }
 
     /**
      * 自定义参数
      */
-    public static Builder custom() {
-        return new Builder();
+    public static PoolBuilder custom() {
+        return new PoolBuilder();
     }
 
 
@@ -242,76 +222,47 @@ public class HttpClientUtils extends HttpUtils {
     }
 
     /**
-     * httpClient的一些配置
+     * httpClient的Builder
      */
-    public static class Builder {
-        private HttpClientConfig clientConfig;
-
-        private Builder() {
-            clientConfig = new HttpClientConfig();
-        }
+    public static class PoolBuilder extends Builder<PoolBuilder> {
+        //从连接池获取连接超时时间
+        private int conRequestTimeout = 5000;
+        //最大线程数
+        private int maxThread = 20;
+        //对相同host请求的最大线程数
+        private int maxRouteThread = 5;
+        //keepAlive(毫秒)
+        //优先用服务器发送的keepAlive时间
+        private int defaultKeepAlive = 30000;
 
         public HttpClientUtils build() {
-            return new HttpClientUtils(clientConfig.clone());
+            return new HttpClientUtils(requestConfig.clone(),
+                    conRequestTimeout,
+                    maxThread,
+                    maxRouteThread,
+                    defaultKeepAlive);
         }
 
-        public Builder setRequestCharset(String requestCharset) {
-            clientConfig.setRequestCharset(requestCharset);
+        public PoolBuilder setConRequestTimeout(int conRequestTimeout) {
+            this.conRequestTimeout = conRequestTimeout;
             return this;
         }
 
-        public Builder setConnectTimeout(int connectTimeout) {
-            clientConfig.setConnectTimeout(connectTimeout);
+        public PoolBuilder setMaxThread(int maxThread) {
+            this.maxThread = maxThread;
             return this;
         }
 
-        public Builder setReadTimeout(int readTimeout) {
-            clientConfig.setReadTimeout(readTimeout);
+        public PoolBuilder setMaxRouteThread(int maxRouteThread) {
+            this.maxRouteThread = maxRouteThread;
             return this;
         }
 
-        public Builder setIgnoreSSL(boolean ignore) {
-            clientConfig.setIgnoreSSL(ignore);
-            return this;
-        }
-
-        public Builder setConRequestTimeout(int conRequestTimeout) {
-            clientConfig.setConRequestTimeout(conRequestTimeout);
-            return this;
-        }
-
-        public Builder setMaxThread(int maxThread) {
-            clientConfig.setMaxThread(maxThread);
-            return this;
-        }
-
-        public Builder setMaxRouteThread(int maxRouteThread) {
-            clientConfig.setMaxRouteThread(maxRouteThread);
-            return this;
-        }
-
-        public Builder setDefaultKeepAlive(int defaultKeepAlive) {
-            clientConfig.setDefaultKeepAlive(defaultKeepAlive);
+        public PoolBuilder setDefaultKeepAlive(int defaultKeepAlive) {
+            this.defaultKeepAlive = defaultKeepAlive;
             return this;
         }
     }
-
-    public int getConRequestTimeout() {
-        return ((HttpClientConfig) requestConfig).getConRequestTimeout();
-    }
-
-    public int getMaxThread() {
-        return ((HttpClientConfig) requestConfig).getMaxThread();
-    }
-
-    public int getMaxRouteThread() {
-        return ((HttpClientConfig) requestConfig).getMaxRouteThread();
-    }
-
-    public int getDefaultKeepAlive() {
-        return ((HttpClientConfig) requestConfig).getDefaultKeepAlive();
-    }
-
 
 }
 

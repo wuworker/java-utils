@@ -10,6 +10,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.security.*;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 
 /**
  * Created by wuxingle on 2017/9/10 0010.
@@ -35,14 +36,14 @@ public class SecurityUtils {
      * 转为Base64字符串
      */
     public static String toBase64(byte[] bytes){
-        return Base64Utils.encodeToString(bytes);
+        return Base64.getEncoder().encodeToString(bytes);
     }
 
     /**
      * 从Base64字符串转为byte
      */
     public static byte[] fromBase64(String base64){
-        return Base64Utils.decodeFromString(base64);
+        return Base64.getDecoder().decode(base64);
     }
 
     /**

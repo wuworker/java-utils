@@ -52,7 +52,7 @@ public class KeyGeneratorUtils {
      * RSA密钥对
      * 1024
      */
-    public static byte[][] generateRSAKey1024(){
+    public static KeyPair generateRSAKey1024(){
         return generateKeyPair("RSA",1024);
     }
 
@@ -60,7 +60,7 @@ public class KeyGeneratorUtils {
      * RSA密钥对
      * 2048
      */
-    public static byte[][] generateRSAKey2048(){
+    public static KeyPair generateRSAKey2048(){
         return generateKeyPair("RSA",2048);
     }
 
@@ -81,18 +81,12 @@ public class KeyGeneratorUtils {
 
     /**
      * 产生密钥对
-     * byte[0]为privateKey
-     * byte[1]为publicKey
      */
-    private static byte[][] generateKeyPair(String algorithm,int len){
+    private static KeyPair generateKeyPair(String algorithm,int len){
         try {
             KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(algorithm);
             keyPairGenerator.initialize(len);
-            KeyPair keyPair = keyPairGenerator.generateKeyPair();
-            byte[][] key = new byte[2][];
-            key[0] = keyPair.getPrivate().getEncoded();
-            key[1] = keyPair.getPublic().getEncoded();
-            return key;
+            return keyPairGenerator.generateKeyPair();
         }catch (Exception e){
             throw new IllegalStateException(e);
         }

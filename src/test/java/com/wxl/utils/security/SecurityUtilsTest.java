@@ -2,6 +2,8 @@ package com.wxl.utils.security;
 
 import org.junit.Test;
 
+import java.security.KeyPair;
+
 import static com.wxl.utils.security.SecurityUtils.*;
 
 /**
@@ -99,9 +101,9 @@ public class SecurityUtilsTest {
     @Test
     public void testdoRSA() throws Exception {
         String pass = "123456";
-        byte[][] keyPair = KeyGeneratorUtils.generateRSAKey1024();
-        byte[] privateKey = keyPair[0];
-        byte[] publicKey = keyPair[1];
+        KeyPair keyPair = KeyGeneratorUtils.generateRSAKey1024();
+        byte[] privateKey = keyPair.getPrivate().getEncoded();
+        byte[] publicKey = keyPair.getPublic().getEncoded();
 
         //公钥加密
         String hex = toHex(doRSAPublicKeyEncode(pass.getBytes(),publicKey));

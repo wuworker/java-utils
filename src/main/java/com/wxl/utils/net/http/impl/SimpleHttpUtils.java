@@ -49,14 +49,14 @@ public class SimpleHttpUtils extends HttpUtils {
      * 获取默认配置
      */
     public static SimpleHttpUtils createDefault() {
-        return new Builder().build();
+        return new SimpleBuilder().build();
     }
 
     /**
      * 自定义配置
      */
-    public static Builder custom() {
-        return new Builder();
+    public static SimpleBuilder custom() {
+        return new SimpleBuilder();
     }
 
 
@@ -177,41 +177,13 @@ public class SimpleHttpUtils extends HttpUtils {
 
 
     /**
-     * http的一些简单配置
+     * simpleHttpBuilder
      */
-    public static class Builder {
-
-        private HttpRequestConfig requestConfig;
-
-        private Builder() {
-            requestConfig = new HttpRequestConfig();
-        }
-
+    public static class SimpleBuilder extends Builder<SimpleBuilder> {
         public SimpleHttpUtils build() {
             return new SimpleHttpUtils(requestConfig.clone());
         }
-
-        public Builder setRequestCharset(String requestCharset) {
-            requestConfig.setRequestCharset(requestCharset);
-            return this;
-        }
-
-        public Builder setConnectTimeout(int connectTimeout) {
-            requestConfig.setConnectTimeout(connectTimeout);
-            return this;
-        }
-
-        public Builder setReadTimeout(int readTimeout) {
-            requestConfig.setReadTimeout(readTimeout);
-            return this;
-        }
-
-        public Builder setIgnoreSSL(boolean ignore) {
-            requestConfig.setIgnoreSSL(ignore);
-            return this;
-        }
     }
-
 
 }
 

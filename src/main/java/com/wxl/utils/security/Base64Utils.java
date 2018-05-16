@@ -8,7 +8,11 @@ import java.util.Arrays;
 /**
  * Created by wuxingle on 2017/9/7 0007.
  * base64工具类
+ * 可以使用java.util.Base64代替
+ * @see SecurityUtils#toBase64(byte[])
+ * @see SecurityUtils#fromBase64(java.lang.String)
  */
+@Deprecated
 public class Base64Utils {
 
 
