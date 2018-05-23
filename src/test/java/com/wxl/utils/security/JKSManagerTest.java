@@ -46,7 +46,7 @@ public class JKSManagerTest {
         JKSManager.genPublicKeyFile(path + "/rsa_public.key", publicKey.getEncoded());
         JKSManager.genCertificateFile(path + "/rsa_cert.key", certificate.getEncoded());
 
-        System.out.println("cer file content:");
+        System.out.println("cer file text:");
         try (FileInputStream in = new FileInputStream(path + "/test1.cer")){
             int len;
             byte[] tmp = new byte[255];
