@@ -1,5 +1,6 @@
 package com.wxl.utils.net.http;
 
+import com.wxl.utils.IOUtils;
 import com.wxl.utils.collection.ByteArrayList;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -28,7 +29,7 @@ public abstract class HttpUtils {
     /**
      * 把参数转为key=value,用&分隔的形式
      */
-    public static <K,V> String toQuery(Map<K, V> query, String encode) {
+    public static <K, V> String toQuery(Map<K, V> query, String encode) {
         if (CollectionUtils.isEmpty(query)) {
             return "";
         }
@@ -113,10 +114,8 @@ public abstract class HttpUtils {
         if (length < 0) {
             length = 4096;
         }
-        ByteArrayList list = ByteArrayList.fromStream(inputStream, length);
-        return list.toByte();
+        return IOUtils.toByte(inputStream, length);
     }
-
 
     /**
      * 请求默认配置

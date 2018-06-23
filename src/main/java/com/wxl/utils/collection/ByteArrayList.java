@@ -1,5 +1,6 @@
 package com.wxl.utils.collection;
 
+import com.wxl.utils.IOUtils;
 import com.wxl.utils.annotation.UnThreadSafe;
 
 import java.io.IOException;
@@ -50,19 +51,7 @@ public class ByteArrayList implements Iterable<Byte>, Serializable, Cloneable {
     }
 
     public static ByteArrayList fromStream(InputStream in, int initSize) throws IOException {
-        ByteArrayList list = new ByteArrayList(initSize);
-        byte[] tmp = new byte[initSize];
-        try {
-            int l;
-            while ((l = in.read(tmp)) != -1) {
-                list.addAll(tmp, 0, l);
-            }
-        } finally {
-            if (in != null) {
-                in.close();
-            }
-        }
-        return list;
+        return new ByteArrayList(IOUtils.toByte(in, initSize));
     }
 
     /**
