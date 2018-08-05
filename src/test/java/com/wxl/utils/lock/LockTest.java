@@ -95,18 +95,18 @@ public class LockTest {
         Runnable r1 =  ()->{
             try {
                 lock.lock();
-                System.out.println("lock suc, await start");
+                System.out.println("localLock suc, await start");
                 condition.awaitUninterruptibly();
-                System.out.println("lock suc, await end");
+                System.out.println("localLock suc, await end");
             } finally {
                 lock.unlock();
             }
         };
         Runnable t2 = ()->{
             try {
-                System.out.println("lock start");
+                System.out.println("localLock start");
                 lock.lock();
-                System.out.println("lock suc");
+                System.out.println("localLock suc");
             }finally {
                 lock.unlock();
             }
@@ -156,7 +156,7 @@ public class LockTest {
             public void run(){
                 try {
                     lock.lock();
-                    System.out.println("lock success ");
+                    System.out.println("localLock success ");
                     sleep(5000);
                 }catch (InterruptedException e){
                     e.printStackTrace();
@@ -184,10 +184,10 @@ public class LockTest {
             boolean suc = false;
             try {
                 if(suc = lock.tryLock()){
-                    System.out.println(Thread.currentThread().getName()+"try lock true");
+                    System.out.println(Thread.currentThread().getName()+"try localLock true");
                     Thread.sleep(4000);
                 } else {
-                    System.out.println(Thread.currentThread().getName()+"try lock false");
+                    System.out.println(Thread.currentThread().getName()+"try localLock false");
                 }
             }catch (InterruptedException e){
                 e.printStackTrace();
@@ -230,9 +230,9 @@ public class LockTest {
           public void run(){
               try {
                   lock.lock();
-                  System.out.println("lock success");
+                  System.out.println("localLock success");
                   boolean await = condition.await(-5, TimeUnit.SECONDS);
-                  System.out.println("lock 1 await:"+await);
+                  System.out.println("localLock 1 await:"+await);
               }catch (Exception e){
                   e.printStackTrace();
               }finally {

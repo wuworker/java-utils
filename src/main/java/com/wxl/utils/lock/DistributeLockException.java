@@ -6,6 +6,8 @@ package com.wxl.utils.lock;
  */
 public class DistributeLockException extends RuntimeException{
 
+    private static final long serialVersionUID = 4025395848369526629L;
+
     public DistributeLockException() {
         super();
     }

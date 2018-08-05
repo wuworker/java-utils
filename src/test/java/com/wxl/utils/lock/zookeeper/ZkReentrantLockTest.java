@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Created by wuxingle on 2018/1/30.
- * zk reentrant lock 测试
+ * zk reentrant localLock 测试
  */
 public class ZkReentrantLockTest {
 
@@ -21,7 +21,7 @@ public class ZkReentrantLockTest {
     public void testFair() throws Exception {
         ZkReentrantLock[] locks = new ZkReentrantLock[10];
         for (int i = 0; i < locks.length; i++) {
-            locks[i] = new ZkReentrantLock(true, "127.0.0.1:2181", "wxl");
+            locks[i] = new ZkReentrantLock("127.0.0.1:2181", "wxl",true);
         }
         testLockSequence(locks);
     }
@@ -30,7 +30,7 @@ public class ZkReentrantLockTest {
     public void testNonFair() throws Exception {
         ZkReentrantLock[] locks = new ZkReentrantLock[10];
         for (int i = 0; i < locks.length; i++) {
-            locks[i] = new ZkReentrantLock(false, "127.0.0.1:2181", "wxl");
+            locks[i] = new ZkReentrantLock("127.0.0.1:2181", "wxl",false);
         }
         testLockSequence(locks);
     }
@@ -59,7 +59,7 @@ public class ZkReentrantLockTest {
         CountDownLatch latch = new CountDownLatch(locks.length - 1);
         for (int i = 1; i < locks.length; i++) {
             Thread thread = new Thread(new Task(latch, locks[i]));
-            thread.setName("zk-lock-t" + i);
+            thread.setName("zk-localLock-t" + i);
             thread.start();
         }
         locks[0].unlock();
@@ -168,7 +168,7 @@ public class ZkReentrantLockTest {
             public void run() {
                 try {
                     lock.lock();
-                    System.out.println("lock success");
+                    System.out.println("localLock success");
                     sleep(5000);
                 } catch (DistributeLockException | InterruptedException e) {
                     e.printStackTrace();
@@ -204,10 +204,10 @@ public class ZkReentrantLockTest {
                 boolean suc = false;
                 try {
                     if (suc = lock.tryLock()) {
-                        System.out.println(Thread.currentThread().getName() + " try lock success");
+                        System.out.println(Thread.currentThread().getName() + " try localLock success");
                         Thread.sleep(4000);
                     } else {
-                        System.out.println(Thread.currentThread().getName() + " try lock fail");
+                        System.out.println(Thread.currentThread().getName() + " try localLock fail");
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -240,12 +240,12 @@ public class ZkReentrantLockTest {
           public void run(){
               try {
                   lock1.lock();
-                  System.out.println("lock 1 lock success");
+                  System.out.println("localLock 1 localLock success");
                   Thread.sleep(3000);
               }catch (Exception e){
                   e.printStackTrace();
               }finally {
-                  System.out.println("lock 1 unlock success");
+                  System.out.println("localLock 1 unlock success");
                   lock1.unlock();
               }
           }
@@ -255,7 +255,7 @@ public class ZkReentrantLockTest {
           public void run(){
               try {
                   boolean suc = lock2.tryLock(3, TimeUnit.SECONDS);
-                  System.out.println("lock2 try lock :" + suc);
+                  System.out.println("lock2 try localLock :" + suc);
               }catch (Exception e){
                   e.printStackTrace();
               }finally {

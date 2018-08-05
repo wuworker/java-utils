@@ -1,7 +1,6 @@
 package com.wxl.utils.lock;
 
 import com.wxl.utils.annotation.ThreadSafe;
-import org.springframework.util.Assert;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -16,31 +15,24 @@ import java.util.concurrent.locks.ReentrantLock;
  * 唤醒需要自行实现
  */
 @ThreadSafe
-public class SafeDistributeLock implements DistributeLock {
+public abstract class AbstractDistributeLock implements DistributeLock, DistributeSync {
 
-    private final DistributeSync sync;
+    protected Lock localLock = new ReentrantLock();
 
-    private Lock lock = new ReentrantLock();
-
-    private Condition condition = lock.newCondition();
-
-    public SafeDistributeLock(DistributeSync sync) {
-        Assert.notNull(sync, "distribute sync can not null");
-        this.sync = sync;
-    }
+    protected Condition localCondition = localLock.newCondition();
 
     @Override
     public void lock() throws DistributeLockException {
         boolean suc = false;
         try {
-            lock.lock();
-            while (!sync.tryAcquire()) {
-                condition.awaitUninterruptibly();
+            localLock.lock();
+            while (!tryAcquire()) {
+                localCondition.awaitUninterruptibly();
             }
             suc = true;
         } finally {
             if (!suc) {
-                lock.unlock();
+                localLock.unlock();
             }
         }
     }
@@ -49,14 +41,14 @@ public class SafeDistributeLock implements DistributeLock {
     public void lockInterruptibly() throws InterruptedException, DistributeLockException {
         boolean suc = false;
         try {
-            lock.lock();
-            while (!sync.tryAcquire()) {
-                condition.await();
+            localLock.lock();
+            while (!tryAcquire()) {
+                localCondition.await();
             }
             suc = true;
         } finally {
             if (!suc) {
-                lock.unlock();
+                localLock.unlock();
             }
         }
     }
@@ -65,13 +57,13 @@ public class SafeDistributeLock implements DistributeLock {
     public boolean tryLock() throws DistributeLockException {
         boolean local = false, remote = false;
         try {
-            if (local = lock.tryLock()) {
-                return remote = sync.tryAcquire();
+            if (local = localLock.tryLock()) {
+                return remote = tryAcquire();
             }
         } finally {
             //本地锁成功,远程锁失败
             if (local && !remote) {
-                lock.unlock();
+                localLock.unlock();
             }
         }
         return false;
@@ -82,12 +74,12 @@ public class SafeDistributeLock implements DistributeLock {
         boolean local = false, remote = false;
         long start = System.nanoTime();
         try {
-            if (local = lock.tryLock(time, unit)) {
+            if (local = localLock.tryLock(time, unit)) {
                 long use = System.nanoTime() - start;
                 long need = unit.toNanos(time) - use;
-                while (!sync.tryAcquire()) {
+                while (!tryAcquire()) {
                     long s = System.nanoTime();
-                    if (!condition.await(need, TimeUnit.NANOSECONDS)) {
+                    if (!localCondition.await(need, TimeUnit.NANOSECONDS)) {
                         return false;
                     }
                     need = need - (System.nanoTime() - s);
@@ -99,7 +91,7 @@ public class SafeDistributeLock implements DistributeLock {
             }
         } finally {
             if (local && !remote) {
-                lock.unlock();
+                localLock.unlock();
             }
         }
         return false;
@@ -108,29 +100,15 @@ public class SafeDistributeLock implements DistributeLock {
     @Override
     public void unlock() throws DistributeLockException {
         try {
-            sync.tryRelease();
+            tryRelease();
         } finally {
-            lock.unlock();
+            localLock.unlock();
         }
     }
 
     @Override
     public Condition newCondition() {
         throw new UnsupportedOperationException();
-    }
-
-    /**
-     * 获取本地锁
-     */
-    public Lock getLocalLock(){
-        return lock;
-    }
-
-    /**
-     * 获取本地condition
-     */
-    public Condition getLocalCondition(){
-        return condition;
     }
 
 }

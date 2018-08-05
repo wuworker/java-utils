@@ -1,10 +1,9 @@
 package com.wxl.utils.lock.redis;
 
 import com.wxl.utils.annotation.ThreadSafe;
-import com.wxl.utils.lock.DistributeLock;
+import com.wxl.utils.lock.AbstractDistributeLock;
 import com.wxl.utils.lock.DistributeLockException;
 import com.wxl.utils.lock.DistributeSync;
-import com.wxl.utils.lock.SafeDistributeLock;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.Assert;
 import redis.clients.jedis.Jedis;
@@ -12,9 +11,11 @@ import redis.clients.jedis.exceptions.JedisException;
 import redis.clients.util.Pool;
 
 import java.util.UUID;
-import java.util.concurrent.*;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 
 /**
  * Created by wuxingle on 2018/03/12
@@ -27,7 +28,7 @@ import java.util.concurrent.locks.Lock;
  */
 @Slf4j
 @ThreadSafe
-public class RedisReentrantLock extends RedisSupport implements DistributeLock {
+public class RedisReentrantLock extends AbstractDistributeLock {
 
     //锁名字,同时也是sub/pub的channel
     private final String lockName;
@@ -35,21 +36,31 @@ public class RedisReentrantLock extends RedisSupport implements DistributeLock {
     //锁过期时间(ms)
     private int expireTime;
 
-    private Lock localLock;
+    private RedisSupport redisSupport;
 
-    private Condition localCondition;
-
-    private SafeDistributeLock distributeLock;
+    private DistributeSync sync;
 
     public RedisReentrantLock(Pool<Jedis> pool, String lockName, int expireTime) {
-        super(pool);
-        Assert.hasText(lockName,"lockName can not empty");
-        Assert.isTrue(expireTime > 0 , "lock expire time must > business exec time");
+        this(new RedisSupport(pool), lockName, expireTime);
+    }
+
+    public RedisReentrantLock(RedisSupport redisSupport, String lockName, int expireTime) {
+        Assert.hasText(lockName, "lockName can not empty");
+        Assert.isTrue(expireTime > 0, "localLock expire time must > business exec time");
         this.lockName = lockName;
         this.expireTime = expireTime;
-        distributeLock = new SafeDistributeLock(new RedisSync());
-        localLock = distributeLock.getLocalLock();
-        localCondition = distributeLock.getLocalCondition();
+        this.redisSupport = redisSupport;
+        this.sync = new RedisSync();
+    }
+
+    @Override
+    public boolean tryAcquire() throws DistributeLockException {
+        return sync.tryAcquire();
+    }
+
+    @Override
+    public boolean tryRelease() throws DistributeLockException {
+        return sync.tryRelease();
     }
 
     private class RedisSync implements DistributeSync {
@@ -61,7 +72,7 @@ public class RedisReentrantLock extends RedisSupport implements DistributeLock {
 
         private int lockCount;
 
-        private JedisUnsuber unsuber;
+        private RedisSupport.JedisUnsuber unsuber;
 
         private ScheduledExecutorService service =
                 Executors.newScheduledThreadPool(1);
@@ -70,28 +81,25 @@ public class RedisReentrantLock extends RedisSupport implements DistributeLock {
 
         private boolean isWaitUnLock = false;
 
-        private SubListener subListener = new SubListener() {
-            @Override
-            public boolean onMessage(String channel, String message) {
-                try {
-                    log.info("redis unlock on message,channel:{},message:{}",channel,message);
-                    localLock.lock();
-                    //收到解锁通知，取消订阅
-                    if (lockName.equals(channel) && UNLOCK_MESSAGE.equals(message)) {
-                        if (expireTaskFuture != null && !expireTaskFuture.isCancelled()
-                                && !expireTaskFuture.isDone()) {
-                            expireTaskFuture.cancel(false);
-                            expireTaskFuture = null;
-                        }
-                        isWaitUnLock = false;
-                        localCondition.signalAll();
-                        log.info("redis unlock notify:channel={}",channel);
-                        return false;
+        private RedisSupport.SubListener subListener = (channel, message) -> {
+            try {
+                log.info("redis unlock on message,channel:{},message:{}", channel, message);
+                localLock.lock();
+                //收到解锁通知，取消订阅
+                if (lockName.equals(channel) && UNLOCK_MESSAGE.equals(message)) {
+                    if (expireTaskFuture != null && !expireTaskFuture.isCancelled()
+                            && !expireTaskFuture.isDone()) {
+                        expireTaskFuture.cancel(false);
+                        expireTaskFuture = null;
                     }
-                    return true;
-                } finally {
-                    localLock.unlock();
+                    isWaitUnLock = false;
+                    localCondition.signalAll();
+                    log.info("redis unlock notify:channel={}", channel);
+                    return false;
                 }
+                return true;
+            } finally {
+                localLock.unlock();
             }
         };
 
@@ -104,14 +112,14 @@ public class RedisReentrantLock extends RedisSupport implements DistributeLock {
                 lockCount++;
                 return true;
             }
-            if(isWaitUnLock){
+            if (isWaitUnLock) {
                 return false;
             }
             try {
                 String value = UUID.randomUUID().toString();
                 Long pttl;
                 do {
-                    boolean suc = setIfAbsent(lockName, value, expireTime);
+                    boolean suc = redisSupport.setIfAbsent(lockName, value, expireTime);
                     if (suc) {
                         lockValue = value;
                         lockCount++;
@@ -119,13 +127,13 @@ public class RedisReentrantLock extends RedisSupport implements DistributeLock {
                         return true;
                     }
                     //注册监听
-                    unsuber = subAsync(subListener, lockName);
-                    pttl = pttl(lockName);
+                    unsuber = redisSupport.subAsync(subListener, lockName);
+                    pttl = redisSupport.pttl(lockName);
                     //key不存在
-                    if (KEY_NOT_EXIST.equals(pttl)) {
+                    if (RedisSupport.KEY_NOT_EXIST.equals(pttl)) {
                         unsuber.unsubscribe(lockName);
                         continue;
-                    } else if (KEY_PERSISTENT.equals(pttl)) {
+                    } else if (RedisSupport.KEY_PERSISTENT.equals(pttl)) {
                         throw new DistributeLockException("distributeLock key is persistent,key=" + lockName);
                     }
                     break;
@@ -163,7 +171,7 @@ public class RedisReentrantLock extends RedisSupport implements DistributeLock {
                 try {
                     String val = lockValue;
                     //删除key并发布解锁消息
-                    Long delCount = eval(
+                    Long delCount = redisSupport.eval(
                             "if redis.call('get',KEYS[1]) == ARGV[1] then " +
                                     "local c = redis.call('del',KEYS[1]) " +
                                     "redis.call('publish',KEYS[1],ARGV[2]) " +
@@ -177,7 +185,7 @@ public class RedisReentrantLock extends RedisSupport implements DistributeLock {
                     lockCount--;
                     //key过期或者已被其他进程加锁
                     if (delCount == 0) {
-                        val = get(lockName);
+                        val = redisSupport.get(lockName);
                         throw new DistributeLockException(val == null ?
                                 "distributeLock key '" + lockName + "' is already expire!" :
                                 "other process has distributeLock! value is " + val);
@@ -193,35 +201,5 @@ public class RedisReentrantLock extends RedisSupport implements DistributeLock {
 
     }
 
-
-    @Override
-    public void lock() throws DistributeLockException {
-        distributeLock.lock();
-    }
-
-    @Override
-    public void lockInterruptibly() throws InterruptedException, DistributeLockException {
-        distributeLock.lockInterruptibly();
-    }
-
-    @Override
-    public boolean tryLock() throws DistributeLockException {
-        return distributeLock.tryLock();
-    }
-
-    @Override
-    public boolean tryLock(long time, TimeUnit unit) throws InterruptedException, DistributeLockException {
-        return distributeLock.tryLock(time, unit);
-    }
-
-    @Override
-    public void unlock() throws DistributeLockException {
-        distributeLock.unlock();
-    }
-
-    @Override
-    public Condition newCondition() {
-        throw new UnsupportedOperationException();
-    }
 
 }
