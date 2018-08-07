@@ -1,0 +1,4 @@
+dependencies {
+    compile(project(':base-utils'))
+    runtime("mysql:mysql-connector-java:${mysqlconVersion}")
+}

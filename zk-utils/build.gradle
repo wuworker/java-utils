@@ -1,0 +1,4 @@
+dependencies {
+    compile(project(':base-utils'))
+    compile("org.apache.zookeeper:zookeeper:${zookeeperVersion}")
+}

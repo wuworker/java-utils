@@ -1,0 +1,78 @@
+buildscript {
+
+}
+
+plugins {
+
+}
+
+ext {
+    springVersion = '5.0.8.RELEASE'
+    dom4jVersion = '1.6.1'
+    fastjsonVersion = '1.2.41'
+    poiVersion = '3.17'
+    httpclientVersion = '4.5.6'
+    mysqlconVersion = '5.1.46'
+    jedisVersion = '2.9.0'
+    zookeeperVersion = '3.4.10'
+    lombokVersion = '1.18.2'
+    junitVersion = '4.12'
+    slf4Version = '1.7.25'
+}
+
+
+allprojects {
+
+    group = "com.wxl.utils"
+    version = "0.0.1-SNAPSHOT"
+
+    apply plugin: 'java'
+    apply plugin: 'idea'
+    apply plugin: 'maven-publish'
+
+    publishing {
+        publications {
+            m2(MavenPublication) {
+                from components.java
+            }
+        }
+
+        repositories {
+            mavenLocal()
+        }
+    }
+
+    compileJava {
+        sourceCompatibility = 1.8  // can be switched to 10 for testing
+        targetCompatibility = 1.8
+        options.encoding = 'UTF-8'
+    }
+
+    compileTestJava {
+        sourceCompatibility = 1.8  // can be switched to 10 for testing
+        targetCompatibility = 1.8
+        options.encoding = 'UTF-8'
+    }
+
+    repositories {
+        mavenLocal()
+        maven {
+            url "http://maven.aliyun.com/nexus/content/groups/public/"
+        }
+        mavenCentral()
+    }
+}
+
+
+subprojects {
+
+    dependencies {
+        compile("org.springframework:spring-core:${springVersion}")
+        compile("org.slf4j:slf4j-api:${slf4Version}")
+        compileOnly("org.projectlombok:lombok:${lombokVersion}")
+        testCompileOnly("org.projectlombok:lombok:${lombokVersion}")
+        testCompile("junit:junit:${junitVersion}")
+    }
+}
+
+

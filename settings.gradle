@@ -1,0 +1,8 @@
+rootProject.name = 'java-utils'
+include 'base-utils'
+include 'file-utils'
+include 'http-utils'
+include 'jdbc-utils'
+include 'redis-utils'
+include 'zk-utils'
+

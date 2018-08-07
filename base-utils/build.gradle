@@ -1,0 +1,5 @@
+dependencies {
+    compile("dom4j:dom4j:${dom4jVersion}")
+    compile("com.alibaba:fastjson:${fastjsonVersion}")
+}
+

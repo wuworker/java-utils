@@ -1,0 +1,5 @@
+dependencies {
+    compile(project(':base-utils'))
+    compile("org.apache.httpcomponents:httpclient:${httpclientVersion}")
+    compile("org.springframework:spring-web:${springVersion}")
+}
